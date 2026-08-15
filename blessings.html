@@ -102,27 +102,14 @@
     color:rgba(245,243,237,0.85);
     max-width:46ch;
   }
-/* ---------- 手機版：讓主視覺不要被文字擋住 ---------- */
+/* ---------- 手機版：拉高主視覺，讓文字往下移，人物露出來 ---------- */
   @media (max-width:480px){
     .hero{
-      aspect-ratio:3 / 4;
-      padding:20px 16px 36px;
-    }
-    .hero::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      z-index:0;
-      background:linear-gradient(
-        180deg,
-        rgba(20,32,28,0.10) 0%,
-        rgba(20,32,28,0.55) 42%,
-        rgba(20,32,28,0.96) 72%,
-        rgba(20,32,28,0.98) 100%
-      );
+      aspect-ratio:3 / 5;
+      padding:20px 16px 40px;
     }
     .hero h1{
-      font-size:clamp(28px,9vw,38px);
+      font-size:clamp(30px,8.5vw,40px);
       margin:10px 0 8px;
     }
     .hero p{
