@@ -102,7 +102,49 @@
     color:rgba(245,243,237,0.85);
     max-width:46ch;
   }
-
+/* ---------- 手機版：讓主視覺不要被文字擋住 ---------- */
+  @media (max-width:480px){
+    .hero{
+      aspect-ratio:3 / 4;
+      padding:20px 16px 36px;
+    }
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      z-index:0;
+      background:linear-gradient(
+        180deg,
+        rgba(20,32,28,0.10) 0%,
+        rgba(20,32,28,0.55) 42%,
+        rgba(20,32,28,0.96) 72%,
+        rgba(20,32,28,0.98) 100%
+      );
+    }
+    .hero h1{
+      font-size:clamp(28px,9vw,38px);
+      margin:10px 0 8px;
+    }
+    .hero p{
+      font-size:13.5px;
+      line-height:1.55;
+    }
+    .hero-top{
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .eyebrow{
+      font-size:11px;
+      padding:5px 9px;
+      white-space:nowrap;
+    }
+    .back-link{
+      font-size:11px;
+      padding:5px 10px;
+      white-space:nowrap;
+    }
+  }
+  
   .hero-top{
     position:relative;
     z-index:1;
