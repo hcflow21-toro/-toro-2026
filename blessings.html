@@ -36,19 +36,7 @@
     min-height:100vh;
   }
   .wrap{max-width:640px;margin:0 auto;padding:0 20px 64px;}
-
-  <div class="heart-modal-overlay" id="heartModalOverlay">
-  <button type="button" class="heart-modal-close" id="heartModalClose">✕</button>
-  <div class="heart-modal-card" id="heartModalCard">
-    <div class="heart-bg"></div>
-    <div class="heart-content">
-      <div class="msg-text" id="heartModalText"></div>
-      <div class="msg-from" id="heartModalFrom"></div>
-    </div>
-  </div>
-</div>
-
-  /* ---------- 精簡版頁首（非主視覺照片，避免和登記頁重複） ---------- */
+   /* ---------- 精簡版頁首（非主視覺照片，避免和登記頁重複） ---------- */
   .hero{
     position:relative;
     aspect-ratio:660 / 1200;
@@ -498,7 +486,17 @@
 
   <footer>祝福內容公開顯示，請留意勿包含個人隱私資訊</footer>
 </div>
-
+ <div class="heart-modal-overlay" id="heartModalOverlay">
+  <button type="button" class="heart-modal-close" id="heartModalClose">✕</button>
+  <div class="heart-modal-card" id="heartModalCard">
+    <div class="heart-bg"></div>
+    <div class="heart-content">
+      <div class="msg-text" id="heartModalText"></div>
+      <div class="msg-from" id="heartModalFrom"></div>
+    </div>
+  </div>
+</div>
+  
 <script>
 const CONFIG = {
   // 貼上跟主頁「一模一樣」的 Google Apps Script 網頁應用程式網址
