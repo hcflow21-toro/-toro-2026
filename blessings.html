@@ -558,7 +558,7 @@ function addMessageCard(msg, prepend){
   card.style.setProperty('--heart-color', color);
   card.dataset.index = idx;
   card.innerHTML =
-    '<div class="heart-bg"></div>' +
+      '<div class="heart-bg"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>' +  '<div class="heart-bg"></div>' +
     '<div class="heart-content">' +
       '<div class="msg-text">' + escapeHtml(msg.message) + '</div>' +
       '<div class="msg-from">— ' + escapeHtml(msg.nickname || '匿名粉絲') + '</div>' +
