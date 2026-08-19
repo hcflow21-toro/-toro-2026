@@ -375,18 +375,27 @@
     justify-content:center;
   }
   .heart-modal-close:hover{border-color:var(--gold);color:var(--gold);}
-
   .heart-modal-card{
     position:relative;
-    width:min(86vw, 420px);
-    aspect-ratio:1/0.92;
+    width:min(94vw, 480px);
+    height:min(88vh, 720px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
   }
-  .heart-modal-card .heart-bg{
+  .heart-modal-heart{
+    position:relative;
+    width:min(50vw, 200px);
+    aspect-ratio:1/0.92;
+    flex-shrink:0;
+    margin-top:6px;
+  }
+  .heart-modal-heart .heart-bg{
     position:absolute; inset:0;
     filter:drop-shadow(0 10px 28px rgba(0,0,0,0.45));
   }
-  .heart-modal-card .heart-bg::before,
-  .heart-modal-card .heart-bg::after{
+  .heart-modal-heart .heart-bg::before,
+  .heart-modal-heart .heart-bg::after{
     content:"";
     position:absolute;
     top:0;
@@ -395,34 +404,40 @@
     background:var(--heart-color,#999);
     border-radius:50% 50% 0 0;
   }
-  .heart-modal-card .heart-bg::before{left:50%;transform:rotate(-45deg);transform-origin:0 100%;}
-  .heart-modal-card .heart-bg::after{left:0;transform:rotate(45deg);transform-origin:100% 100%;}
+  .heart-modal-heart .heart-bg::before{left:50%;transform:rotate(-45deg);transform-origin:0 100%;}
+  .heart-modal-heart .heart-bg::after{left:0;transform:rotate(45deg);transform-origin:100% 100%;}
 
-  .heart-modal-card .heart-content{
-    position:absolute;
-    inset:12% 18% 34% 18%;
+  .heart-modal-text-panel{
+    flex:1;
+    width:100%;
+    margin-top:-18px;
+    background:rgba(245,243,237,0.08);
+    border:1px solid rgba(245,243,237,0.18);
+    border-radius:20px;
+    padding:24px 20px;
+    overflow-y:auto;
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
     text-align:center;
-    overflow-y:auto;
+    box-sizing:border-box;
   }
   .heart-modal-card .msg-text{
-    font-size:16px;
-    line-height:1.55;
+    font-size:17px;
+    line-height:1.7;
     color:#fff;
     font-weight:600;
     word-break:break-word;
     text-shadow:0 1px 3px rgba(0,0,0,0.3);
   }
   .heart-modal-card .msg-from{
-    margin-top:14px;
+    margin-top:18px;
     font-size:13px;
     color:rgba(255,255,255,0.9);
     font-family:'IBM Plex Mono',monospace;
     text-shadow:0 1px 3px rgba(0,0,0,0.3);
   }
+  
   footer{
     text-align:center;
     font-size:12px;
