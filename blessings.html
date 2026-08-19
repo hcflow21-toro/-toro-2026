@@ -269,30 +269,16 @@
     aspect-ratio:1/0.92;
     margin-bottom:6px;
   }
-  .msg-card .heart-bg{
+    .msg-card .heart-bg{
     position:absolute;
     inset:0;
     filter:drop-shadow(0 2px 4px rgba(20,32,28,0.18));
   }
-  .msg-card .heart-bg::before,
-  .msg-card .heart-bg::after{
-    content:"";
-    position:absolute;
-    top:0;
-    width:51%;
-    height:78%;
-    background:var(--heart-color,#999);
-    border-radius:50% 50% 0 0;
-  }
-  .msg-card .heart-bg::before{
-    left:50%;
-    transform:rotate(-45deg);
-    transform-origin:0 100%;
-  }
-  .msg-card .heart-bg::after{
-    left:0;
-    transform:rotate(45deg);
-    transform-origin:100% 100%;
+  .msg-card .heart-bg svg{
+    width:100%;
+    height:100%;
+    display:block;
+    fill:var(--heart-color,#999);
   }
   .msg-card .heart-content{
     position:absolute;
