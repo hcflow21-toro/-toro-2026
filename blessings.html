@@ -376,22 +376,16 @@
     flex-shrink:0;
     margin-top:6px;
   }
-  .heart-modal-heart .heart-bg{
+    .heart-modal-heart .heart-bg{
     position:absolute; inset:0;
     filter:drop-shadow(0 10px 28px rgba(0,0,0,0.45));
   }
-  .heart-modal-heart .heart-bg::before,
-  .heart-modal-heart .heart-bg::after{
-    content:"";
-    position:absolute;
-    top:0;
-    width:51%;
-    height:78%;
-    background:var(--heart-color,#999);
-    border-radius:50% 50% 0 0;
+  .heart-modal-heart .heart-bg svg{
+    width:100%;
+    height:100%;
+    display:block;
+    fill:var(--heart-color,#999);
   }
-  .heart-modal-heart .heart-bg::before{left:50%;transform:rotate(-45deg);transform-origin:0 100%;}
-  .heart-modal-heart .heart-bg::after{left:0;transform:rotate(45deg);transform-origin:100% 100%;}
 
   .heart-modal-text-panel{
     flex:1;
