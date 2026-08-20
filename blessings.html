@@ -365,12 +365,12 @@
     height:100%;
     box-sizing:border-box;
   }
-    .heart-modal-heart{
+      .heart-modal-heart{
     position:absolute;
     top:50%;
     left:50%;
     transform:translate(-50%,-50%);
-    width:min(78vw, 380px);
+    width:min(92vw, calc(92vh / 0.92));
     aspect-ratio:1/0.92;
     z-index:1;
   }
@@ -395,6 +395,10 @@
     text-align:center;
     box-sizing:border-box;
     z-index:2;
+       
+  }
+    .heart-modal-text-panel.center-content{
+    justify-content:center;
   }
   .heart-modal-card .msg-text{
     font-size:17px;
@@ -568,6 +572,15 @@ function openHeartModal(idx){
   document.getElementById('heartModalText').textContent = msg.message;
   document.getElementById('heartModalFrom').textContent = '— ' + (msg.nickname || '匿名粉絲');
   document.getElementById('heartModalOverlay').classList.add('show');
+
+  const panel = document.querySelector('.heart-modal-text-panel');
+  panel.scrollTop = 0;
+  panel.classList.remove('center-content');
+  requestAnimationFrame(()=>{
+    if(panel.scrollHeight <= panel.clientHeight){
+      panel.classList.add('center-content');
+    }
+  });
 }
 
 function closeHeartModal(){
