@@ -560,12 +560,14 @@ function addMessageCard(msg, prepend){
   card.addEventListener('click', ()=> openHeartModal(idx));
   if(prepend){ grid.prepend(card); } else { grid.appendChild(card); }
 
-  const contentEl = card.querySelector('.heart-content');
+   const contentEl = card.querySelector('.heart-content');
   const textEl = card.querySelector('.msg-text');
+  const fromEl = card.querySelector('.msg-from');
   textEl.textContent = msg.message;
-  if(contentEl.scrollHeight > contentEl.clientHeight){
+  const maxTextHeight = contentEl.clientHeight - fromEl.offsetHeight - 6;
+  if(textEl.scrollHeight > maxTextHeight){
     let text = msg.message;
-    while(text.length > 0 && contentEl.scrollHeight > contentEl.clientHeight){
+    while(text.length > 0 && textEl.scrollHeight > maxTextHeight){
       text = text.slice(0, -3);
       textEl.textContent = text.trim() + '...';
     }
