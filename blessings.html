@@ -540,35 +540,36 @@ function escapeHtml(str){
 
 let blessingsData = [];
 
-function truncatePreview(text, maxLen){
-  if(!text) return '';
-  const clean = String(text).replace(/\s+/g, ' ').trim();
-  if(clean.length <= maxLen) return clean;
-  return clean.slice(0, maxLen).trim() + '...';
-}
-
-
 function addMessageCard(msg, prepend){
   const grid = document.getElementById('wallGrid');
   const empty = document.getElementById('wallEmpty');
   if(empty) empty.remove();
-
   const idx = blessingsData.length;
   blessingsData.push(msg);
-
   const card = document.createElement('div');
   card.className = 'msg-card';
   const color = msg.colorHex || '#999';
   card.style.setProperty('--heart-color', color);
   card.dataset.index = idx;
   card.innerHTML =
-      '<div class="heart-bg"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>' +  '<div class="heart-bg"></div>' +
+    '<div class="heart-bg"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>' +
     '<div class="heart-content">' +
-              '<div class="msg-text">' + escapeHtml(truncatePreview(msg.message, 42)) + '</div>' +      
+      '<div class="msg-text"></div>' +
       '<div class="msg-from">— ' + escapeHtml(msg.nickname || '匿名粉絲') + '</div>' +
     '</div>';
   card.addEventListener('click', ()=> openHeartModal(idx));
   if(prepend){ grid.prepend(card); } else { grid.appendChild(card); }
+
+  const contentEl = card.querySelector('.heart-content');
+  const textEl = card.querySelector('.msg-text');
+  textEl.textContent = msg.message;
+  if(contentEl.scrollHeight > contentEl.clientHeight){
+    let text = msg.message;
+    while(text.length > 0 && contentEl.scrollHeight > contentEl.clientHeight){
+      text = text.slice(0, -3);
+      textEl.textContent = text.trim() + '...';
+    }
+  }
 }
 
 function openHeartModal(idx){
