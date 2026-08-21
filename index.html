@@ -522,7 +522,8 @@ document.getElementById('pickupForm').addEventListener('submit', async (e)=>{
     phone: document.getElementById('phone').value.trim(),
     email: document.getElementById('email').value.trim(),
     date: state.date,
-    location: state.location
+    location: state.location,
+    ticketNumber: ticketNumber
   };
   try{
     await fetch(CONFIG.SCRIPT_URL, {
