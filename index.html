@@ -383,7 +383,7 @@
       <div class="row2">
         <div class="field" data-field="phone">
           <label>電話 <span class="opt">必填</span></label>
-          <input type="tel" id="phone" placeholder="09xx-xxx-xxx">
+          <input type="tel" id="phone" placeholder="09xxxxxxxx" inputmode="numeric" pattern="\d{10}" maxlength="10" autocomplete="tel">
           <div class="err-msg">請輸入正確的電話號碼</div>
         </div>
         <div class="field" data-field="email">
@@ -498,7 +498,7 @@ function validate(){
   let ok = true;
   setFieldError('name', !name); if(!name) ok=false;
   setFieldError('nickname', !nickname); if(!nickname) ok=false;
-  const phoneOk = /^[\d\-\+\s()]{8,}$/.test(phone);
+  const phoneOk = /^\d{10}$/.test(phone);
   setFieldError('phone', !phoneOk); if(!phoneOk) ok=false;
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   setFieldError('email', !emailOk); if(!emailOk) ok=false;
@@ -507,6 +507,9 @@ function validate(){
   document.getElementById('formErr').classList.toggle('show', !ok);
   return ok;
 }
+document.getElementById('phone').addEventListener('input', (e)=>{
+  e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+});
 document.getElementById('pickupForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   if(!validate()) return;
