@@ -214,6 +214,15 @@
   }
   .pill.selected.date{background:var(--teal);border-color:var(--teal);}
   .pill.selected.loc{background:var(--gold);border-color:var(--gold);color:var(--ink);}
+  .session-group{margin-bottom:14px;}
+  .session-group:last-child{margin-bottom:0;}
+  .session-heading{
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--teal);
+    margin-bottom:6px;
+  }
   .submit-btn{
     width:100%;
     margin-top:8px;
@@ -392,15 +401,10 @@
           <div class="err-msg">請輸入正確的 Email</div>
         </div>
       </div>
-      <div class="field" data-field="date">
-        <label>領取日期 <span class="opt">必填</span></label>
-        <div class="pill-group" id="dateGroup"></div>
-        <div class="err-msg">請選擇領取日期</div>
-      </div>
-      <div class="field" data-field="location">
-        <label>領取地點 <span class="opt">必填</span></label>
-        <div class="pill-group" id="locGroup"></div>
-        <div class="err-msg">請選擇領取地點</div>
+      <div class="field" data-field="session">
+        <label>領取場次 <span class="opt">必填</span></label>
+        <div id="sessionGroup"></div>
+        <div class="err-msg">請選擇領取場次</div>
       </div>
       <button type="submit" class="submit-btn" id="submitBtn">完成登記</button>
     </form>
@@ -451,36 +455,45 @@ if (!CONFIG.REGISTRATION_OPEN) {
   document.getElementById('stub').style.display = 'none';
   document.getElementById('closedBox').style.display = 'block';
 }
-const DATE_OPTIONS = [
-  "9月26日",
-  "9月28日",
-  "10月1日",
-  "10月2日"
+const SESSIONS = [
+  { date: "9/26", time: "16:00-18:00", locations: ["高雄珊瑚廣場"] },
+  { date: "9/28", time: "16:00-18:00", locations: ["台北西門地下街", "台中新時代星巴克", "高雄摩斯漢堡中正店"] },
+  { date: "10/1", time: "19:00-21:00", locations: ["彰化全家新再安店"] },
+  { date: "10/2", time: "19:00-21:00", locations: ["台北中山地下街", "台中新時代星巴克", "高雄大遠百星巴克"] }
 ];
-const LOCATION_OPTIONS = [
-  "台北場",
-  "台中場",
-  "彰化場",
-  "高雄場"
-];
-const state = { date: null, location: null };
-function renderPills(containerId, options, stateKey, cls){
+const state = { date: null, time: null, location: null };
+function renderSessions(containerId){
   const el = document.getElementById(containerId);
-  options.forEach(opt=>{
-    const btn = document.createElement('div');
-    btn.className = 'pill ' + cls;
-    btn.textContent = opt;
-    btn.addEventListener('click', ()=>{
-      [...el.children].forEach(c=>c.classList.remove('selected'));
-      btn.classList.add('selected');
-      state[stateKey] = opt;
-      clearFieldError(stateKey);
+  const allPills = [];
+  SESSIONS.forEach(group=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'session-group';
+    const heading = document.createElement('div');
+    heading.className = 'session-heading';
+    heading.textContent = `${group.date}　${group.time}`;
+    wrap.appendChild(heading);
+    const pillGroup = document.createElement('div');
+    pillGroup.className = 'pill-group';
+    group.locations.forEach(loc=>{
+      const btn = document.createElement('div');
+      btn.className = 'pill loc';
+      btn.textContent = loc;
+      btn.addEventListener('click', ()=>{
+        allPills.forEach(p=>p.classList.remove('selected'));
+        btn.classList.add('selected');
+        state.date = group.date;
+        state.time = group.time;
+        state.location = loc;
+        clearFieldError('session');
+      });
+      pillGroup.appendChild(btn);
+      allPills.push(btn);
     });
-    el.appendChild(btn);
+    wrap.appendChild(pillGroup);
+    el.appendChild(wrap);
   });
 }
-renderPills('dateGroup', DATE_OPTIONS, 'date', 'date');
-renderPills('locGroup', LOCATION_OPTIONS, 'location', 'loc');
+renderSessions('sessionGroup');
 const ticketNumber = Math.floor(100000 + Math.random()*900000);
 function fieldEl(name){ return document.querySelector(`[data-field="${name}"]`); }
 function setFieldError(name, on){
@@ -502,8 +515,7 @@ function validate(){
   setFieldError('phone', !phoneOk); if(!phoneOk) ok=false;
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   setFieldError('email', !emailOk); if(!emailOk) ok=false;
-  setFieldError('date', !state.date); if(!state.date) ok=false;
-  setFieldError('location', !state.location); if(!state.location) ok=false;
+  setFieldError('session', !state.location); if(!state.location) ok=false;
   document.getElementById('formErr').classList.toggle('show', !ok);
   return ok;
 }
@@ -521,7 +533,7 @@ document.getElementById('pickupForm').addEventListener('submit', async (e)=>{
     nickname: document.getElementById('nickname').value.trim(),
     phone: document.getElementById('phone').value.trim(),
     email: document.getElementById('email').value.trim(),
-    date: state.date,
+    date: `${state.date} ${state.time}`,
     location: state.location,
     ticketNumber: ticketNumber
   };
