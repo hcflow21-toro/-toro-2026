@@ -345,7 +345,7 @@
 
   .heart-modal-close{
     position:absolute;
-    top:20px; right:20px;
+    top:20px; left:20px;
     width:40px; height:40px;
     border-radius:50%;
     border:1.5px solid rgba(245,243,237,0.5);
@@ -360,6 +360,16 @@
     z-index:20;
   }
   .heart-modal-close:hover{border-color:var(--gold);color:var(--gold);}
+
+  .heart-modal-counter{
+    position:absolute;
+    top:20px; right:20px;
+    z-index:20;
+    color:rgba(245,243,237,0.85);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    letter-spacing:.5px;
+  }
 
   /* the letter, centered, always full/correct size — never distorted or cropped */
   .heart-modal-content{
@@ -511,6 +521,7 @@
 </div>
  <div class="heart-modal-overlay" id="heartModalOverlay">
   <button type="button" class="heart-modal-close" id="heartModalClose">✕</button>
+  <div class="heart-modal-counter" id="heartModalCounter">1 / 1</div>
   <div class="heart-modal-content" id="heartModalContent">
     <div class="letter-wrap">
       <div class="letter-heart" id="letterHeart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>
@@ -615,6 +626,34 @@ function addMessageCard(msg, prepend){
 
 const HEART_PATH = "M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z";
 
+let currentMsgIndex = 0;
+
+// 更新信紙目前顯示的內容（文字、署名、上方小愛心顏色、右上角第幾則／共幾則），
+// 用在「左右滑動切換上一則／下一則」時，不需要重播整個拆信封動畫。
+function renderMessageAt(idx){
+  const total = blessingsData.length;
+  if(total === 0) return;
+  currentMsgIndex = ((idx % total) + total) % total; // 循環：最後一則滑過去回到第一則
+  const msg = blessingsData[currentMsgIndex];
+  document.getElementById('heartModalText').textContent = msg.message;
+  document.getElementById('heartModalFrom').textContent = '— ' + (msg.nickname || '匿名粉絲');
+  document.getElementById('heartModalScroll').scrollTop = 0;
+  document.getElementById('heartModalCounter').textContent = (currentMsgIndex+1) + ' / ' + total;
+  const heartPath = document.querySelector('#letterHeart path');
+  if(heartPath) heartPath.setAttribute('fill', msg.colorHex || '#999');
+}
+
+// 左右滑動切換留言時，內容用輕微的淡出淡入交接，感覺是「翻到另一頁」而不是硬切換。
+function switchMessage(delta){
+  const card = document.getElementById('heartModalCard');
+  card.style.transition = 'opacity .18s ease';
+  card.style.opacity = '0';
+  setTimeout(()=>{
+    renderMessageAt(currentMsgIndex + delta);
+    card.style.opacity = '1';
+  }, 180);
+}
+
 // 「拆信封」動畫：愛心先短暫放大發亮，接著整個從原本的位置與大小，一路變成信紙
 // 最終停放的位置與大小 — 不是「跳頁」，是同一個動作連貫做完。
 function openHeartModal(idx, cardEl){
@@ -623,9 +662,7 @@ function openHeartModal(idx, cardEl){
 
   const overlay = document.getElementById('heartModalOverlay');
   const proceed = ()=>{
-    document.getElementById('heartModalText').textContent = msg.message;
-    document.getElementById('heartModalFrom').textContent = '— ' + (msg.nickname || '匿名粉絲');
-    document.getElementById('heartModalScroll').scrollTop = 0;
+    renderMessageAt(idx);
     overlay.classList.add('show');
   };
 
@@ -678,6 +715,27 @@ function closeHeartModal(){
 }
 
 document.getElementById('heartModalClose').addEventListener('click', closeHeartModal);
+
+// 左右滑動切換上一則／下一則留言 — 用 Pointer Events（滑鼠、觸控都通用），
+// 只有在明顯偏水平的拖曳才會觸發切換，垂直拖曳留給信紙內文正常捲動。
+(function(){
+  const overlay = document.getElementById('heartModalOverlay');
+  let dragStartX = null, dragStartY = null, dragActive = false;
+  overlay.addEventListener('pointerdown', e=>{
+    dragStartX = e.clientX; dragStartY = e.clientY; dragActive = true;
+  });
+  overlay.addEventListener('pointerup', e=>{
+    if(!dragActive || dragStartX===null) return;
+    dragActive = false;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    if(Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4){
+      switchMessage(dx < 0 ? 1 : -1);
+    }
+    dragStartX = null; dragStartY = null;
+  });
+  overlay.addEventListener('pointercancel', ()=>{ dragActive = false; dragStartX = null; });
+})();
 document.getElementById('heartModalOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'heartModalOverlay') closeHeartModal();
 });
