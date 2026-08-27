@@ -340,6 +340,14 @@
                var(--ink);
     z-index:1000;
     overflow:hidden;
+    touch-action:pan-y;
+  }
+
+  .swipe-hint{
+    position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    z-index:15;text-align:center;pointer-events:none;
+    font-size:11px;letter-spacing:1px;color:rgba(245,243,237,.55);
+    font-family:'IBM Plex Mono',monospace;
   }
   .heart-modal-overlay.show{display:flex;}
 
@@ -522,6 +530,7 @@
  <div class="heart-modal-overlay" id="heartModalOverlay">
   <button type="button" class="heart-modal-close" id="heartModalClose">✕</button>
   <div class="heart-modal-counter" id="heartModalCounter">1 / 1</div>
+  <div class="swipe-hint">‹ 左右滑動看其他祝福 ›</div>
   <div class="heart-modal-content" id="heartModalContent">
     <div class="letter-wrap">
       <div class="letter-heart" id="letterHeart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>
@@ -720,21 +729,37 @@ document.getElementById('heartModalClose').addEventListener('click', closeHeartM
 // 只有在明顯偏水平的拖曳才會觸發切換，垂直拖曳留給信紙內文正常捲動。
 (function(){
   const overlay = document.getElementById('heartModalOverlay');
-  let dragStartX = null, dragStartY = null, dragActive = false;
+  let dragStartX = null, dragStartY = null, dragActive = false, horizontalLock = false, fired = false;
+
   overlay.addEventListener('pointerdown', e=>{
-    dragStartX = e.clientX; dragStartY = e.clientY; dragActive = true;
+    dragStartX = e.clientX; dragStartY = e.clientY;
+    dragActive = true; horizontalLock = false; fired = false;
   });
-  overlay.addEventListener('pointerup', e=>{
-    if(!dragActive || dragStartX===null) return;
-    dragActive = false;
+
+  overlay.addEventListener('pointermove', e=>{
+    if(!dragActive || dragStartX===null || fired) return;
     const dx = e.clientX - dragStartX;
     const dy = e.clientY - dragStartY;
-    if(Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4){
-      switchMessage(dx < 0 ? 1 : -1);
+    // Once the gesture is clearly more horizontal than vertical, claim it explicitly —
+    // this stops the browser's own edge-swipe/back gesture (or the text area's own
+    // vertical scroll handling) from intercepting it partway through, which is what was
+    // silently swallowing swipes in one direction before pointerup ever fired.
+    if(!horizontalLock && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.4){
+      horizontalLock = true;
     }
-    dragStartX = null; dragStartY = null;
+    if(horizontalLock){
+      e.preventDefault();
+      if(Math.abs(dx) > 60){
+        switchMessage(dx < 0 ? 1 : -1);
+        fired = true;
+        dragActive = false;
+      }
+    }
   });
-  overlay.addEventListener('pointercancel', ()=>{ dragActive = false; dragStartX = null; });
+
+  function endDrag(){ dragActive = false; dragStartX = null; horizontalLock = false; fired = false; }
+  overlay.addEventListener('pointerup', endDrag);
+  overlay.addEventListener('pointercancel', endDrag);
 })();
 document.getElementById('heartModalOverlay').addEventListener('click', (e)=>{
   if(e.target.id === 'heartModalOverlay') closeHeartModal();
