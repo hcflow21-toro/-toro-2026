@@ -378,7 +378,6 @@
   <section class="stub" id="stub" style="display:none;">
     <h2>填寫領取資訊</h2>
     <p class="sub">請確實填寫，領取現場將依此資料核對身分。</p>
-     <p class="sub">一人限領取一份。</p>
     <div class="form-err" id="formErr">請完成下方標示為必填的欄位。</div>
     <form id="pickupForm" novalidate>
       <div class="row2">
@@ -388,9 +387,9 @@
           <div class="err-msg">請輸入姓名</div>
         </div>
         <div class="field" data-field="nickname">
-          <label>暱稱 <span class="opt">必填</span></label>
-          <input type="text" id="nickname" placeholder="現場會用暱稱稱呼你">
-          <div class="err-msg">請輸入暱稱</div>
+          <label>姓名 <span class="opt">必填</span></label>
+          <input type="text" id="nickname" placeholder="請填寫本名">
+          <div class="err-msg">請輸入姓名</div>
         </div>
       </div>
       <div class="row2">
@@ -418,14 +417,13 @@
     <h2 style="font-family:'Big Shoulders Display',sans-serif;text-transform:uppercase;">登記成功</h2>
     <p>請保留此畫面，現場出示以核對領取資料。</p>
     <div class="claim-code">
-      <div><span class="k">領取代碼　</span><span id="rcName"></span></div>
       <div><span class="k">姓名　　　</span><span id="rcNameVal"></span></div>
       <div><span class="k">領取日期　</span><span id="rcDate"></span></div>
       <div><span class="k">領取地點　</span><span id="rcLoc"></span></div>
     </div>
     <div class="line-cta">
-      <p><strong>請務必加入生日應援官方 LINE 帳號</strong><br>領取相關公告、場次異動都只會透過 LINE 發送，未加入將無法收到通知。</p>
-      <a class="line-btn" id="lineBtn" href="#" target="_blank" rel="noopener">加入生日應援官方 LINE 帳號</a>
+      <p><strong>請務必加入官方 LINE 帳號</strong><br>領取相關公告、場次異動都只會透過 LINE 發送，未加入將無法收到通知。</p>
+      <a class="line-btn" id="lineBtn" href="#" target="_blank" rel="noopener">加入官方 LINE 帳號</a>
     </div>
   </section>
   <section class="stub" id="closedBox" style="display:none;">
@@ -526,7 +524,6 @@ function renderSessions(containerId){
   });
 }
 renderSessions('sessionGroup');
-const ticketNumber = Math.floor(100000 + Math.random()*900000);
 function fieldEl(name){ return document.querySelector(`[data-field="${name}"]`); }
 function setFieldError(name, on){
   const f = fieldEl(name);
@@ -566,8 +563,7 @@ document.getElementById('pickupForm').addEventListener('submit', async (e)=>{
     phone: document.getElementById('phone').value.trim(),
     email: document.getElementById('email').value.trim(),
     date: `${state.date} ${state.time}`,
-    location: state.location,
-    ticketNumber: ticketNumber
+    location: state.location
   };
   try{
     await fetch(CONFIG.SCRIPT_URL, {
@@ -576,7 +572,6 @@ document.getElementById('pickupForm').addEventListener('submit', async (e)=>{
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
     });
-    document.getElementById('rcName').textContent = ticketNumber;
     document.getElementById('rcNameVal').textContent = payload.name;
     document.getElementById('rcDate').textContent = payload.date;
     document.getElementById('rcLoc').textContent = payload.location;
