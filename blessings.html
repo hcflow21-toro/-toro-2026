@@ -330,16 +330,20 @@
     .msg-card{cursor:pointer;}
 
   /* ---------- 放大版愛心 Modal ---------- */
-    .heart-modal-overlay{
+    /* ---------- 放大版：拆信封 + 信紙 ---------- */
+  .heart-modal-overlay{
     display:none;
     position:fixed;
     inset:0;
-    background:var(--ink);
+    background:radial-gradient(circle at 22% 30%, rgba(62,142,126,0.12), transparent 45%),
+               radial-gradient(circle at 82% 70%, rgba(232,169,75,0.10), transparent 45%),
+               var(--ink);
     z-index:1000;
+    overflow:hidden;
   }
   .heart-modal-overlay.show{display:flex;}
 
-    .heart-modal-close{
+  .heart-modal-close{
     position:absolute;
     top:20px; right:20px;
     width:40px; height:40px;
@@ -353,67 +357,95 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    z-index:5;
+    z-index:20;
   }
   .heart-modal-close:hover{border-color:var(--gold);color:var(--gold);}
-      .heart-modal-card{
-    position:relative;
-    width:100%;
-    height:100%;
+
+  /* the letter, centered, always full/correct size — never distorted or cropped */
+  .heart-modal-content{
+    position:absolute;inset:0;z-index:1;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:calc(54px + env(safe-area-inset-top,0px)) 0 calc(16px + env(safe-area-inset-bottom,0px));
     box-sizing:border-box;
   }
-      .heart-modal-heart{
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:min(92vw, calc(92vh / 0.92));
-    aspect-ratio:1/0.92;
-    z-index:1;
+  .letter-wrap{
+    width:86%;max-width:360px;flex:0 0 auto;
+    display:flex;flex-direction:column;align-items:center;
   }
-    .heart-modal-heart .heart-bg{
-    position:absolute; inset:0;
-    filter:drop-shadow(0 10px 28px rgba(0,0,0,0.45));
+  .letter-heart{
+    width:28px;height:28px;margin-bottom:-2px;z-index:2;
+    filter:drop-shadow(0 4px 8px rgba(0,0,0,.35));
   }
-  .heart-modal-heart .heart-bg svg{
-    width:100%;
-    height:100%;
-    display:block;
-    fill:var(--heart-color,#999);
+  .letter-heart svg{width:100%;height:100%;display:block;}
+
+  /* NEVER cap this box's height independently of its width — the paper image's aspect
+     ratio (700:990) must always be honored exactly, or background-size:cover crops the
+     artwork. If space is tight, .letter-wrap's width (above) is what adapts, never this. */
+  .letter-card{
+    position:relative;width:100%;aspect-ratio:700/990;border-radius:6px;
+    background-image:url('letter-paper.jpg');
+    background-size:cover;background-position:center;
+    box-shadow:0 18px 40px rgba(0,0,0,.45);
+    overflow:hidden;
+  }
+  /* 抬頭（固定）— sits right below the top illustrations, never scrolls */
+  .letter-header{
+    position:absolute;left:16%;right:16%;top:23%;
+  }
+  .letter-eyebrow{font-size:9.5px;letter-spacing:2.5px;color:#B7895A;text-align:center;margin-bottom:6px;}
+  .letter-title{font-size:16.5px;color:var(--ink);text-align:center;font-weight:700;margin-bottom:10px;}
+  .letter-rule{width:46px;height:1px;background:#C9A46E;margin:0 auto 14px;}
+  /* 內容（可滑動）— the only part that scrolls; bounded well clear of every decoration */
+  .letter-inner{
+    position:absolute;left:16%;right:29%;top:36%;bottom:28%;
+    overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;touch-action:pan-y;
+    scrollbar-width:none;-ms-overflow-style:none;
+  }
+  .letter-inner::-webkit-scrollbar{display:none;}
+  .heart-modal-card .msg-text{
+    font-size:13.5px;line-height:1.9;color:var(--ink);font-weight:400;
+    word-break:break-word;white-space:pre-wrap;text-shadow:none;
+  }
+  /* 署名（固定）— sits just above the bottom-right decoration, right-aligned, never touching it */
+  .heart-modal-card .msg-from{
+    position:absolute;left:16%;right:29%;top:74%;
+    text-align:right;font-size:12.5px;color:var(--ink);opacity:.85;
+    margin-top:0;font-family:'IBM Plex Mono',monospace;
+    text-shadow:none;
   }
 
-    .heart-modal-text-panel{
-    position:absolute;
-    inset:74px 24px 28px 24px;
-    overflow-y:auto;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
-    box-sizing:border-box;
-    z-index:2;
-       
+  /* ---------- 開信封動畫（愛心 → 信紙）---------- */
+  .flip-envelope{
+    position:fixed;z-index:30;pointer-events:none;
+    transition:left .62s cubic-bezier(.32,.86,.28,1), top .62s cubic-bezier(.32,.86,.28,1),
+               width .62s cubic-bezier(.32,.86,.28,1), height .62s cubic-bezier(.32,.86,.28,1);
   }
-    .heart-modal-text-panel.center-content{
-    justify-content:center;
+  .flip-heart{position:absolute;inset:0;transition:opacity .4s ease .12s, transform .4s ease .12s;}
+  .flip-heart svg{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));}
+  .flip-active .flip-heart{opacity:0;transform:scale(.7);}
+  .flip-flap{
+    position:absolute;top:6%;width:42%;height:34%;
+    clip-path:polygon(0 100%, 100% 100%, 50% 0);
+    -webkit-clip-path:polygon(0 100%, 100% 100%, 50% 0);
+    transform-origin:50% 100%;
+    transition:transform .5s cubic-bezier(.3,.8,.3,1) .05s, opacity .5s ease .25s;
   }
-  .heart-modal-card .msg-text{
-    font-size:17px;
-    line-height:1.7;
-    color:#fff;
-    font-weight:600;
-    word-break:break-word;
-    text-shadow:0 2px 6px rgba(0,0,0,0.55);
-    white-space:pre-wrap;
+  .flap-left{left:5%;}
+  .flap-right{right:5%;}
+  .flip-active .flap-left{transform:rotate(-58deg) translate(-18%,-6%);opacity:0;}
+  .flip-active .flap-right{transform:rotate(58deg) translate(18%,-6%);opacity:0;}
+  .flip-letter{
+    position:absolute;inset:0;border-radius:5px;overflow:hidden;
+    background-image:url('letter-paper.jpg');
+    background-size:cover;background-position:center;
+    box-shadow:0 16px 34px rgba(0,0,0,.4);
+    opacity:0;transform:scale(.55) translateY(10%);
+    transition:opacity .5s ease .18s, transform .55s cubic-bezier(.2,.85,.3,1.1) .18s;
   }
-  .heart-modal-card .msg-from{
-    margin-top:18px;
-    font-size:13px;
-    color:rgba(255,255,255,0.9);
-    font-family:'IBM Plex Mono',monospace;
-    text-shadow:0 2px 6px rgba(0,0,0,0.55);
-  }
-  
+  .flip-active .flip-letter{opacity:1;transform:scale(1) translateY(0);}
+  .msg-card.sending{visibility:hidden;}
+
   footer{
     text-align:center;
     font-size:12px;
@@ -479,13 +511,20 @@
 </div>
  <div class="heart-modal-overlay" id="heartModalOverlay">
   <button type="button" class="heart-modal-close" id="heartModalClose">✕</button>
-    <div class="heart-modal-card" id="heartModalCard">
-        <div class="heart-modal-heart">
-      <div class="heart-bg"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>
-    </div>
-    <div class="heart-modal-text-panel">
-      <div class="msg-text" id="heartModalText"></div>
-      <div class="msg-from" id="heartModalFrom"></div>
+  <div class="heart-modal-content" id="heartModalContent">
+    <div class="letter-wrap">
+      <div class="letter-heart" id="letterHeart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>
+      <div class="heart-modal-card" id="heartModalCard">
+        <div class="letter-header">
+          <div class="letter-eyebrow">A MESSAGE FOR TORO</div>
+          <div class="letter-title">給 Toro 的一封祝福</div>
+          <div class="letter-rule"></div>
+        </div>
+        <div class="letter-inner" id="heartModalScroll">
+          <div class="msg-text" id="heartModalText"></div>
+        </div>
+        <div class="msg-from" id="heartModalFrom"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -557,7 +596,7 @@ function addMessageCard(msg, prepend){
       '<div class="msg-text"></div>' +
       '<div class="msg-from">— ' + escapeHtml(msg.nickname || '匿名粉絲') + '</div>' +
     '</div>';
-  card.addEventListener('click', ()=> openHeartModal(idx));
+  card.addEventListener('click', ()=> openHeartModal(idx, card));
   if(prepend){ grid.prepend(card); } else { grid.appendChild(card); }
 
    const contentEl = card.querySelector('.heart-content');
@@ -574,21 +613,63 @@ function addMessageCard(msg, prepend){
   }
 }
 
-function openHeartModal(idx){
+const HEART_PATH = "M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z";
+
+// 「拆信封」動畫：愛心先短暫放大發亮，接著整個從原本的位置與大小，一路變成信紙
+// 最終停放的位置與大小 — 不是「跳頁」，是同一個動作連貫做完。
+function openHeartModal(idx, cardEl){
   const msg = blessingsData[idx];
   if(!msg) return;
-  document.getElementById('heartModalCard').style.setProperty('--heart-color', msg.colorHex || '#999');
-  document.getElementById('heartModalText').textContent = msg.message;
-  document.getElementById('heartModalFrom').textContent = '— ' + (msg.nickname || '匿名粉絲');
-  document.getElementById('heartModalOverlay').classList.add('show');
 
-  const panel = document.querySelector('.heart-modal-text-panel');
-  panel.scrollTop = 0;
-  panel.classList.remove('center-content');
+  const overlay = document.getElementById('heartModalOverlay');
+  const proceed = ()=>{
+    document.getElementById('heartModalText').textContent = msg.message;
+    document.getElementById('heartModalFrom').textContent = '— ' + (msg.nickname || '匿名粉絲');
+    document.getElementById('heartModalScroll').scrollTop = 0;
+    overlay.classList.add('show');
+  };
+
+  if(!cardEl){ proceed(); return; } // 保險：非點卡片觸發時（例如鍵盤操作）直接開啟，不做動畫
+
+  const heartShape = cardEl.querySelector('.heart-bg');
+  const startRect = heartShape.getBoundingClientRect();
+  const heartColor = msg.colorHex || '#999';
+
+  proceed(); // 先把內容準備好、疊在最上層但初始不可見，才能量出信紙的正確目標位置
+  overlay.style.opacity = '0';
+
   requestAnimationFrame(()=>{
-    if(panel.scrollHeight <= panel.clientHeight){
-      panel.classList.add('center-content');
-    }
+    const cardBoxEl = document.getElementById('heartModalCard');
+    const endRect = cardBoxEl.getBoundingClientRect();
+    overlay.style.opacity = '';
+
+    const flip = document.createElement('div');
+    flip.className = 'flip-envelope';
+    flip.style.left = startRect.left + 'px';
+    flip.style.top = startRect.top + 'px';
+    flip.style.width = startRect.width + 'px';
+    flip.style.height = startRect.height + 'px';
+    flip.innerHTML = `
+      <div class="flip-heart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
+      <div class="flip-flap flap-left" style="background:${heartColor}"></div>
+      <div class="flip-flap flap-right" style="background:${heartColor}"></div>
+      <div class="flip-letter"></div>
+    `;
+    document.body.appendChild(flip);
+    cardEl.classList.add('sending');
+
+    requestAnimationFrame(()=>{
+      flip.classList.add('flip-active');
+      flip.style.left = endRect.left + 'px';
+      flip.style.top = endRect.top + 'px';
+      flip.style.width = endRect.width + 'px';
+      flip.style.height = endRect.height + 'px';
+    });
+
+    setTimeout(()=>{
+      flip.remove();
+      cardEl.classList.remove('sending');
+    }, 680);
   });
 }
 
