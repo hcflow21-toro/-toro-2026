@@ -372,7 +372,10 @@
     <div class="line"></div>
     <div class="notch right"></div>
   </div>
-  <section class="stub" id="stub">
+  <section class="stub" id="loadingBox">
+    <p style="text-align:center;color:var(--ink-soft);padding:40px 0;">載入中…</p>
+  </section>
+  <section class="stub" id="stub" style="display:none;">
     <h2>填寫領取資訊</h2>
     <p class="sub">請確實填寫，領取現場將依此資料核對身分。</p>
     <div class="form-err" id="formErr">請完成下方標示為必填的欄位。</div>
@@ -451,10 +454,38 @@ const CONFIG = {
   REGISTRATION_OPEN: true
 };
 document.getElementById('lineBtn').href = CONFIG.LINE_URL;
-if (!CONFIG.REGISTRATION_OPEN) {
-  document.getElementById('stub').style.display = 'none';
-  document.getElementById('closedBox').style.display = 'block';
+function checkStatus(){
+  return new Promise((resolve)=>{
+    const cbName = 'rcStatusCb_' + Date.now();
+    const timeout = setTimeout(()=>{
+      // 逾時就當作正常開放，避免因網路問題把報名卡死
+      cleanup();
+      resolve({ open: true, timedOut: true });
+    }, 6000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data){
+      cleanup();
+      resolve(data);
+    };
+    const script = document.createElement('script');
+    script.src = CONFIG.SCRIPT_URL + '?action=status&callback=' + cbName;
+    script.onerror = ()=>{ cleanup(); resolve({ open: true, timedOut: true }); };
+    document.body.appendChild(script);
+  });
 }
+checkStatus().then((status)=>{
+  document.getElementById('loadingBox').style.display = 'none';
+  const isOpen = CONFIG.REGISTRATION_OPEN && status.open !== false;
+  if (isOpen) {
+    document.getElementById('stub').style.display = '';
+  } else {
+    document.getElementById('closedBox').style.display = 'block';
+  }
+});
 const SESSIONS = [
   { date: "9/26", time: "16:00-18:00", locations: ["高雄珊瑚廣場"] },
   { date: "9/28", time: "16:00-18:00", locations: ["台北西門地下街", "台中新時代星巴克", "高雄摩斯漢堡中正店"] },
