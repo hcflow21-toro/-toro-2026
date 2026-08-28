@@ -268,6 +268,15 @@
     width:100%;
     aspect-ratio:1/0.92;
     margin-bottom:6px;
+    transition:transform .45s cubic-bezier(.22,.85,.3,1.05);
+  }
+  .msg-card:active{transform:scale(.97);}
+  .msg-card.opening{
+    transform:translateY(-10px) scale(1.12);
+    z-index:5;
+  }
+  .msg-card.opening .heart-bg{
+    filter:drop-shadow(0 14px 22px rgba(0,0,0,.28)) brightness(1.15) saturate(1.1);
   }
     .msg-card .heart-bg{
     position:absolute;
@@ -464,6 +473,19 @@
   .flip-active .flip-letter{opacity:1;transform:scale(1) translateY(0);}
   .msg-card.sending{visibility:hidden;}
 
+  /* 點擊瞬間愛心發亮噴出的金色小星星 */
+  .sparkle{
+    position:fixed;z-index:35;pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,#fff8dd 0%,rgba(255,248,221,0) 70%);
+    animation:sparkleOut .9s ease-out forwards;
+  }
+  @keyframes sparkleOut{
+    0%{opacity:0;transform:scale(0) translateY(0);}
+    25%{opacity:1;}
+    70%{opacity:.8;}
+    100%{opacity:0;transform:scale(1) translateY(-26px);}
+  }
+
   footer{
     text-align:center;
     font-size:12px;
@@ -635,6 +657,23 @@ function addMessageCard(msg, prepend){
 
 const HEART_PATH = "M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z";
 
+// 點擊愛心的瞬間，在愛心周圍灑出幾顆金色小星星
+function spawnSparkles(cardEl){
+  const rect = cardEl.getBoundingClientRect();
+  for(let i=0;i<6;i++){
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const size = 4 + Math.random()*5;
+    s.style.width = size+'px';
+    s.style.height = size+'px';
+    s.style.left = (rect.left + rect.width*(0.2+Math.random()*0.6)) + 'px';
+    s.style.top = (rect.top + rect.height*(0.15+Math.random()*0.5)) + 'px';
+    s.style.animationDelay = (i*0.06 + Math.random()*0.08)+'s';
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(), 1300);
+  }
+}
+
 let currentMsgIndex = 0;
 
 // 更新信紙目前顯示的內容（文字、署名、上方小愛心顏色、右上角第幾則／共幾則），
@@ -677,46 +716,53 @@ function openHeartModal(idx, cardEl){
 
   if(!cardEl){ proceed(); return; } // 保險：非點卡片觸發時（例如鍵盤操作）直接開啟，不做動畫
 
-  const heartShape = cardEl.querySelector('.heart-bg');
-  const startRect = heartShape.getBoundingClientRect();
-  const heartColor = msg.colorHex || '#999';
+  // 前奏：愛心先放大發亮、噴出金色星星，停頓一下再開始「拆信封」
+  cardEl.classList.add('opening');
+  spawnSparkles(cardEl);
 
-  proceed(); // 先把內容準備好、疊在最上層但初始不可見，才能量出信紙的正確目標位置
-  overlay.style.opacity = '0';
+  setTimeout(()=>{
+    const heartShape = cardEl.querySelector('.heart-bg');
+    const startRect = heartShape.getBoundingClientRect();
+    const heartColor = msg.colorHex || '#999';
 
-  requestAnimationFrame(()=>{
-    const cardBoxEl = document.getElementById('heartModalCard');
-    const endRect = cardBoxEl.getBoundingClientRect();
-    overlay.style.opacity = '';
-
-    const flip = document.createElement('div');
-    flip.className = 'flip-envelope';
-    flip.style.left = startRect.left + 'px';
-    flip.style.top = startRect.top + 'px';
-    flip.style.width = startRect.width + 'px';
-    flip.style.height = startRect.height + 'px';
-    flip.innerHTML = `
-      <div class="flip-heart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
-      <div class="flip-flap flap-left" style="background:${heartColor}"></div>
-      <div class="flip-flap flap-right" style="background:${heartColor}"></div>
-      <div class="flip-letter"></div>
-    `;
-    document.body.appendChild(flip);
-    cardEl.classList.add('sending');
+    proceed(); // 先把內容準備好、疊在最上層但初始不可見，才能量出信紙的正確目標位置
+    overlay.style.opacity = '0';
 
     requestAnimationFrame(()=>{
-      flip.classList.add('flip-active');
-      flip.style.left = endRect.left + 'px';
-      flip.style.top = endRect.top + 'px';
-      flip.style.width = endRect.width + 'px';
-      flip.style.height = endRect.height + 'px';
-    });
+      const cardBoxEl = document.getElementById('heartModalCard');
+      const endRect = cardBoxEl.getBoundingClientRect();
+      overlay.style.opacity = '';
 
-    setTimeout(()=>{
-      flip.remove();
-      cardEl.classList.remove('sending');
-    }, 680);
-  });
+      const flip = document.createElement('div');
+      flip.className = 'flip-envelope';
+      flip.style.left = startRect.left + 'px';
+      flip.style.top = startRect.top + 'px';
+      flip.style.width = startRect.width + 'px';
+      flip.style.height = startRect.height + 'px';
+      flip.innerHTML = `
+        <div class="flip-heart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
+        <div class="flip-flap flap-left" style="background:${heartColor}"></div>
+        <div class="flip-flap flap-right" style="background:${heartColor}"></div>
+        <div class="flip-letter"></div>
+      `;
+      document.body.appendChild(flip);
+      cardEl.classList.add('sending');
+
+      requestAnimationFrame(()=>{
+        flip.classList.add('flip-active');
+        flip.style.left = endRect.left + 'px';
+        flip.style.top = endRect.top + 'px';
+        flip.style.width = endRect.width + 'px';
+        flip.style.height = endRect.height + 'px';
+      });
+
+      setTimeout(()=>{
+        flip.remove();
+        cardEl.classList.remove('sending');
+        cardEl.classList.remove('opening');
+      }, 680);
+    });
+  }, 420);
 }
 
 function closeHeartModal(){
