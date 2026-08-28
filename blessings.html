@@ -727,13 +727,16 @@ function openHeartModal(idx, cardEl){
     const startRect = heartShape.getBoundingClientRect();
     const heartColor = msg.colorHex || '#999';
 
-    proceed(); // 先把內容準備好、疊在最上層但初始不可見，才能量出信紙的正確目標位置
+    proceed(); // 先把內容準備好、疊在最上層但保持透明，才能量出信紙的正確目標位置
+    overlay.style.transition = 'none';
     overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
 
     requestAnimationFrame(()=>{
       const cardBoxEl = document.getElementById('heartModalCard');
       const endRect = cardBoxEl.getBoundingClientRect();
-      overlay.style.opacity = '';
+      // 注意：這裡先不把 overlay 顯示出來，要等信封動畫整段播完才淡入，
+      // 不然 overlay（z-index 1000）會立刻蓋住還在飛的信封（z-index 30）。
 
       const flip = document.createElement('div');
       flip.className = 'flip-envelope';
@@ -764,8 +767,17 @@ function openHeartModal(idx, cardEl){
         flip.classList.add('flip-open');
       }, 780);
 
+      // 拆信封動畫快演完時，底下真正的信紙淡入，跟動畫無縫接上
+      setTimeout(()=>{
+        overlay.style.transition = 'opacity .3s ease';
+        overlay.style.opacity = '1';
+      }, 780 + 500);
+
       setTimeout(()=>{
         flip.remove();
+        overlay.style.transition = '';
+        overlay.style.opacity = '';
+        overlay.style.pointerEvents = '';
         cardEl.classList.remove('sending');
         cardEl.classList.remove('opening');
       }, 780 + 700);
