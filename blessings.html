@@ -445,32 +445,34 @@
   /* ---------- 開信封動畫（愛心 → 信紙）---------- */
   .flip-envelope{
     position:fixed;z-index:30;pointer-events:none;
-    transition:left .62s cubic-bezier(.32,.86,.28,1), top .62s cubic-bezier(.32,.86,.28,1),
-               width .62s cubic-bezier(.32,.86,.28,1), height .62s cubic-bezier(.32,.86,.28,1);
+    transition:left .7s cubic-bezier(.32,.86,.28,1), top .7s cubic-bezier(.32,.86,.28,1),
+               width .7s cubic-bezier(.32,.86,.28,1), height .7s cubic-bezier(.32,.86,.28,1);
   }
-  .flip-heart{position:absolute;inset:0;transition:opacity .4s ease .12s, transform .4s ease .12s;}
+  /* 第一階段：愛心飛行途中淡出，變成合起來的信封 */
+  .flip-heart{position:absolute;inset:0;transition:opacity .35s ease, transform .35s ease;}
   .flip-heart svg{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));}
-  .flip-active .flip-heart{opacity:0;transform:scale(.7);}
+  .flip-flying .flip-heart{opacity:0;transform:scale(.7);}
+  /* 第二階段：抵達信紙位置後，稍微停頓，信封蓋才裂開往兩側掀起 */
   .flip-flap{
     position:absolute;top:6%;width:42%;height:34%;
     clip-path:polygon(0 100%, 100% 100%, 50% 0);
     -webkit-clip-path:polygon(0 100%, 100% 100%, 50% 0);
     transform-origin:50% 100%;
-    transition:transform .5s cubic-bezier(.3,.8,.3,1) .05s, opacity .5s ease .25s;
+    transition:transform .55s cubic-bezier(.3,.8,.3,1), opacity .3s ease .2s;
   }
   .flap-left{left:5%;}
   .flap-right{right:5%;}
-  .flip-active .flap-left{transform:rotate(-58deg) translate(-18%,-6%);opacity:0;}
-  .flip-active .flap-right{transform:rotate(58deg) translate(18%,-6%);opacity:0;}
+  .flip-open .flap-left{transform:rotate(-72deg) translate(-22%,-8%);opacity:0;}
+  .flip-open .flap-right{transform:rotate(72deg) translate(22%,-8%);opacity:0;}
   .flip-letter{
     position:absolute;inset:0;border-radius:5px;overflow:hidden;
     background-image:url('letter-paper.jpg');
     background-size:cover;background-position:center;
     box-shadow:0 16px 34px rgba(0,0,0,.4);
-    opacity:0;transform:scale(.55) translateY(10%);
-    transition:opacity .5s ease .18s, transform .55s cubic-bezier(.2,.85,.3,1.1) .18s;
+    opacity:0;transform:scale(.5) translateY(14%);
+    transition:opacity .5s ease .12s, transform .6s cubic-bezier(.2,.85,.3,1.15) .12s;
   }
-  .flip-active .flip-letter{opacity:1;transform:scale(1) translateY(0);}
+  .flip-open .flip-letter{opacity:1;transform:scale(1) translateY(0);}
   .msg-card.sending{visibility:hidden;}
 
   /* 點擊瞬間愛心發亮噴出的金色小星星 */
@@ -748,19 +750,25 @@ function openHeartModal(idx, cardEl){
       document.body.appendChild(flip);
       cardEl.classList.add('sending');
 
+      // 階段一：愛心飛向信紙的位置，途中淡化成合起來的信封（700ms）
       requestAnimationFrame(()=>{
-        flip.classList.add('flip-active');
+        flip.classList.add('flip-flying');
         flip.style.left = endRect.left + 'px';
         flip.style.top = endRect.top + 'px';
         flip.style.width = endRect.width + 'px';
         flip.style.height = endRect.height + 'px';
       });
 
+      // 階段二：抵達後停頓一下，信封蓋才裂開、信紙彈出來
+      setTimeout(()=>{
+        flip.classList.add('flip-open');
+      }, 780);
+
       setTimeout(()=>{
         flip.remove();
         cardEl.classList.remove('sending');
         cardEl.classList.remove('opening');
-      }, 680);
+      }, 780 + 700);
     });
   }, 420);
 }
