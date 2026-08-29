@@ -268,7 +268,7 @@
     width:100%;
     aspect-ratio:1/0.92;
     margin-bottom:6px;
-    transition:transform .45s cubic-bezier(.22,.85,.3,1.05);
+    transition:transform .32s cubic-bezier(.22,.85,.3,1.05);
   }
   .msg-card:active{transform:scale(.97);}
   .msg-card.opening{
@@ -424,7 +424,7 @@
   .letter-rule{width:46px;height:1px;background:#C9A46E;margin:0 auto 14px;}
   /* 內容（可滑動）— the only part that scrolls; bounded well clear of every decoration */
   .letter-inner{
-    position:absolute;left:16%;right:29%;top:36%;bottom:28%;
+    position:absolute;left:16%;right:29%;top:36%;bottom:34.5%;
     overflow-y:auto;overflow-x:hidden;
     -webkit-overflow-scrolling:touch;touch-action:pan-y;
     scrollbar-width:none;-ms-overflow-style:none;
@@ -434,9 +434,9 @@
     font-size:13.5px;line-height:1.9;color:var(--ink);font-weight:400;
     word-break:break-word;white-space:pre-wrap;text-shadow:none;
   }
-  /* 署名（固定）— sits just above the bottom-right decoration, right-aligned, never touching it */
+  /* 署名（固定）— 新版信紙把愛心圖案移到這附近，署名往下移到愛心旁邊 */
   .heart-modal-card .msg-from{
-    position:absolute;left:16%;right:29%;top:74%;
+    position:absolute;left:35%;right:17%;top:74.5%;
     text-align:right;font-size:12.5px;color:var(--ink);opacity:.85;
     margin-top:0;font-family:'IBM Plex Mono',monospace;
     text-shadow:none;
@@ -445,32 +445,38 @@
   /* ---------- 開信封動畫（愛心 → 信紙）---------- */
   .flip-envelope{
     position:fixed;z-index:30;pointer-events:none;
-    transition:left .7s cubic-bezier(.32,.86,.28,1), top .7s cubic-bezier(.32,.86,.28,1),
-               width .7s cubic-bezier(.32,.86,.28,1), height .7s cubic-bezier(.32,.86,.28,1);
+    perspective:700px;
+    transition:left .45s cubic-bezier(.32,.86,.28,1), top .45s cubic-bezier(.32,.86,.28,1),
+               width .45s cubic-bezier(.32,.86,.28,1), height .45s cubic-bezier(.32,.86,.28,1);
   }
-  /* 第一階段：愛心飛行途中淡出，變成合起來的信封 */
-  .flip-heart{position:absolute;inset:0;transition:opacity .35s ease, transform .35s ease;}
+  /* 第一階段：愛心飛行途中淡出，變成合起來的信封（實心色塊本體） */
+  .flip-heart{position:absolute;inset:0;z-index:4;transition:opacity .28s ease, transform .28s ease;}
   .flip-heart svg{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));}
   .flip-flying .flip-heart{opacity:0;transform:scale(.7);}
-  /* 第二階段：抵達信紙位置後，稍微停頓，信封蓋才裂開往兩側掀起 */
-  .flip-flap{
-    position:absolute;top:6%;width:42%;height:34%;
-    clip-path:polygon(0 100%, 100% 100%, 50% 0);
-    -webkit-clip-path:polygon(0 100%, 100% 100%, 50% 0);
-    transform-origin:50% 100%;
-    transition:transform .55s cubic-bezier(.3,.8,.3,1), opacity .3s ease .2s;
+
+  .flip-body{
+    position:absolute;inset:0;z-index:1;border-radius:5px;
+    box-shadow:0 10px 24px rgba(0,0,0,.32);
   }
-  .flap-left{left:5%;}
-  .flap-right{right:5%;}
-  .flip-open .flap-left{transform:rotate(-72deg) translate(-22%,-8%);opacity:0;}
-  .flip-open .flap-right{transform:rotate(72deg) translate(22%,-8%);opacity:0;}
+
+  /* 第二階段：抵達信紙位置後，信封蓋像真的拆信一樣往後翻開 */
+  .flip-flap{
+    position:absolute;left:0;top:0;width:100%;height:50%;z-index:3;
+    clip-path:polygon(0 0, 100% 0, 50% 100%);
+    -webkit-clip-path:polygon(0 0, 100% 0, 50% 100%);
+    transform-origin:top center;
+    transform-style:preserve-3d;
+    transition:transform .38s cubic-bezier(.4,.4,.3,1), opacity .18s ease .2s;
+  }
+  .flip-open .flip-flap{transform:rotateX(150deg);opacity:0;}
+
   .flip-letter{
-    position:absolute;inset:0;border-radius:5px;overflow:hidden;
+    position:absolute;inset:0;z-index:2;border-radius:5px;overflow:hidden;
     background-image:url('letter-paper.jpg');
     background-size:cover;background-position:center;
     box-shadow:0 16px 34px rgba(0,0,0,.4);
-    opacity:0;transform:scale(.5) translateY(14%);
-    transition:opacity .5s ease .12s, transform .6s cubic-bezier(.2,.85,.3,1.15) .12s;
+    opacity:0;transform:scale(.62) translateY(14%);
+    transition:opacity .32s ease .08s, transform .4s cubic-bezier(.25,.85,.3,1.15) .08s;
   }
   .flip-open .flip-letter{opacity:1;transform:scale(1) translateY(0);}
   .msg-card.sending{visibility:hidden;}
@@ -744,16 +750,17 @@ function openHeartModal(idx, cardEl){
       flip.style.top = startRect.top + 'px';
       flip.style.width = startRect.width + 'px';
       flip.style.height = startRect.height + 'px';
+      // 由下到上疊放：信封本體 → 信紙 → 信封蓋（蓋住信紙）→ 愛心（飛行途中淡出）
       flip.innerHTML = `
-        <div class="flip-heart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
-        <div class="flip-flap flap-left" style="background:${heartColor}"></div>
-        <div class="flip-flap flap-right" style="background:${heartColor}"></div>
+        <div class="flip-body" style="background:${heartColor}"></div>
         <div class="flip-letter"></div>
+        <div class="flip-flap" style="background:${heartColor}"></div>
+        <div class="flip-heart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
       `;
       document.body.appendChild(flip);
       cardEl.classList.add('sending');
 
-      // 階段一：愛心飛向信紙的位置，途中淡化成合起來的信封（700ms）
+      // 階段一：愛心飛向信紙的位置，途中淡化成合起來的信封（450ms）
       requestAnimationFrame(()=>{
         flip.classList.add('flip-flying');
         flip.style.left = endRect.left + 'px';
@@ -762,16 +769,16 @@ function openHeartModal(idx, cardEl){
         flip.style.height = endRect.height + 'px';
       });
 
-      // 階段二：抵達後停頓一下，信封蓋才裂開、信紙彈出來
+      // 階段二：一抵達，信封蓋立刻像拆信一樣往後翻開，信紙從裡面浮現
       setTimeout(()=>{
         flip.classList.add('flip-open');
-      }, 780);
+      }, 450);
 
-      // 拆信封動畫快演完時，底下真正的信紙淡入，跟動畫無縫接上
+      // 信封蓋翻開到一半時，底下真正的信紙淡入，跟動畫無縫接上
       setTimeout(()=>{
-        overlay.style.transition = 'opacity .3s ease';
+        overlay.style.transition = 'opacity .22s ease';
         overlay.style.opacity = '1';
-      }, 780 + 500);
+      }, 450 + 240);
 
       setTimeout(()=>{
         flip.remove();
@@ -780,9 +787,9 @@ function openHeartModal(idx, cardEl){
         overlay.style.pointerEvents = '';
         cardEl.classList.remove('sending');
         cardEl.classList.remove('opening');
-      }, 780 + 700);
+      }, 450 + 440);
     });
-  }, 420);
+  }, 300);
 }
 
 function closeHeartModal(){
@@ -892,6 +899,13 @@ function loadBlessings(){
 }
 document.getElementById('wallRefresh').addEventListener('click', loadBlessings);
 loadBlessings();
+
+// ===== 測試用假資料（僅供預覽拆信封動畫，正式上線前記得刪除這段）=====
+addMessageCard({nickname:'哞哞', colorHex:'#e8a94b', message:'祝Toro生日快樂！願你永遠元氣滿滿，事事順心，我們都愛你！'}, false);
+addMessageCard({nickname:'小魚乾', colorHex:'#7b6fce', message:'謝謝你一直以來的正能量，陪我度過很多低潮的日子，生日快樂！'}, false);
+addMessageCard({nickname:'匿名粉絲', colorHex:'#3e8e7e', message:'希望新的一歲，你能更靠近夢想一點，我們會一直支持你。'}, false);
+// ===== 測試假資料結束 =====
+
 </script>
 
 </body>
