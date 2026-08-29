@@ -449,15 +449,14 @@
      這個切點剛好落在封口愛心貼紙的正中間，所以愛心上半顆隨 flap 掀開、
      下半顆留在 body 上 —— 就像真的把封口貼紙撕開一樣。
      愛心貼紙的顏色用留言當初選的顏色，蓋在照片原本的粉色愛心上面。 */
+  /* 各階段的動畫時長／緩動都改由 JS 在對的時間點用 inline style 設定，
+     這樣「飛入 → 撕開封口貼紙 → 信封蓋慢慢掀開 → 信紙被抽出來 → 攤開閱讀」
+     每一段才能各自有不同的速度與停頓，堆疊出收到信、慢慢拆信的感覺。 */
   .flip-env{
     position:fixed;z-index:31;pointer-events:none;
     perspective:900px;
     filter:drop-shadow(0 18px 32px rgba(0,0,0,.35));
-    transition:left .42s cubic-bezier(.32,.86,.28,1), top .42s cubic-bezier(.32,.86,.28,1),
-               width .42s cubic-bezier(.32,.86,.28,1), height .42s cubic-bezier(.32,.86,.28,1),
-               opacity .32s ease .3s;
   }
-  .flip-env.flip-open{ opacity:0; }
 
   .flip-env-body{
     position:absolute;left:0;right:0;bottom:0;height:42.97%;overflow:hidden;
@@ -469,36 +468,50 @@
     position:absolute;left:0;right:0;top:0;height:57.03%;overflow:hidden;
     border-radius:7px 7px 0 0;
     transform-origin:50% 0%;
-    transition:transform .42s cubic-bezier(.4,.4,.3,1);
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;
   }
   .flip-env.flip-open .flip-env-flap{
-    transform:rotateX(-140deg) translateY(2%);
+    transform:rotateX(-142deg) translateY(2%);
   }
   .flip-env-flap-bg{
     position:absolute;inset:0;
     background-image:url('envelope.png');
     background-repeat:no-repeat;background-size:100% auto;background-position:left top;
   }
+  /* 信封口內側的一點陰影，暗示信紙是從信封「裡面」被抽出來的，增加立體感 */
+  .flip-env-body::before{
+    content:'';position:absolute;left:4%;right:4%;top:0;height:32%;
+    background:linear-gradient(180deg, rgba(20,32,28,.22), rgba(20,32,28,0));
+    pointer-events:none;
+  }
   /* 封口愛心：位置、大小對齊照片裡真正的愛心貼紙，上下兩顆各自被 flap／body 的
      overflow:hidden 裁掉一半，合起來剛好是完整一顆 */
-  .flip-env-seal-top, .flip-env-seal-bottom{ position:absolute; }
+  .flip-env-seal-top, .flip-env-seal-bottom{
+    position:absolute;
+    transition:transform .34s ease, filter .34s ease;
+  }
   .flip-env-seal-top svg, .flip-env-seal-bottom svg{ width:100%;height:100%;display:block; }
   .flip-env-seal-top{ left:44.9%; width:9.7%; top:89.55%; height:20.9%; }
   .flip-env-seal-bottom{ left:44.9%; width:9.7%; top:-13.86%; height:27.72%; }
+  /* 撕開封口貼紙：上下兩半微微翹起、分開，像真的把貼紙撕開一角 */
+  .flip-env.peel .flip-env-seal-top{
+    transform:translate(-4%,-8%) rotate(-9deg) scale(1.05);
+    filter:brightness(1.2) drop-shadow(0 3px 5px rgba(0,0,0,.28));
+  }
+  .flip-env.peel .flip-env-seal-bottom{
+    transform:translate(3%,4%) rotate(5deg) scale(1.03);
+    filter:brightness(1.08);
+  }
 
-  /* 信紙：一開始很小、藏在信封中間，信封蓋掀開、整個信封淡出的同時，
-     信紙從裡面被抽出來、長大到最終停放的大小與位置 */
+  /* 信紙：一開始很小、藏在信封裡，先小小地被抽出信封口一段距離，
+     停頓一下讓人「看到信紙冒出來」，接著才攤開長大到閱讀的大小與位置 */
   .flip-env-letter{
     position:fixed;z-index:30;pointer-events:none;border-radius:5px;overflow:hidden;
     background-image:url('letter-paper.jpg');
     background-size:cover;background-position:center;
     box-shadow:0 16px 34px rgba(0,0,0,.4);
     opacity:0;
-    transition:left .42s cubic-bezier(.25,.85,.3,1.08), top .42s cubic-bezier(.25,.85,.3,1.08),
-               width .42s cubic-bezier(.25,.85,.3,1.08), height .42s cubic-bezier(.25,.85,.3,1.08),
-               opacity .36s ease;
   }
-  .flip-env-letter.show{ opacity:1; }
 
   .msg-card.sending{visibility:hidden;}
 
@@ -731,8 +744,10 @@ function switchMessage(delta){
   }, 180);
 }
 
-// 「拆信封」動畫：愛心先短暫放大發亮，接著整個從原本的位置與大小，一路變成信紙
-// 最終停放的位置與大小 — 不是「跳頁」，是同一個動作連貫做完。
+// 「拆信封」動畫：把整個過程拆成好幾個有停頓感的小段落——
+// 信封飛來 → 停一下、封口貼紙微微翹起剝離 → 信封蓋慢慢掀開 →
+// 信紙先從信封口冒出一小截 → 停一下、才整封攤開變成可以閱讀的信紙。
+// 節奏刻意放慢，希望有「收到信、捨不得太快拆完」的溫暖感。
 function openHeartModal(idx, cardEl){
   const msg = blessingsData[idx];
   if(!msg) return;
@@ -749,6 +764,10 @@ function openHeartModal(idx, cardEl){
   cardEl.classList.add('opening');
   spawnSparkles(cardEl);
 
+  const EASE_OUT   = 'cubic-bezier(.16,.84,.32,1)';   // 平滑減速，飛入／抽出用
+  const EASE_FLAP  = 'cubic-bezier(.22,.61,.32,1)';    // 信封蓋掀開，稍微慢工出細活
+  const EASE_SETTLE= 'cubic-bezier(.28,1.28,.4,1)';    // 信紙攤開到最終大小時，微微回彈、輕輕落定
+
   setTimeout(()=>{
     const heartShape = cardEl.querySelector('.heart-bg');
     const startRect = heartShape.getBoundingClientRect();
@@ -763,7 +782,7 @@ function openHeartModal(idx, cardEl){
       const cardBoxEl = document.getElementById('heartModalCard');
       const endRect = cardBoxEl.getBoundingClientRect();
       // 注意：這裡先不把 overlay 顯示出來，要等信封動畫整段播完才淡入，
-      // 不然 overlay（z-index 1000）會立刻蓋住還在飛的信封／信紙。
+      // 不然 overlay（z-index 1000）會立刻蓋住還在動畫中的信封／信紙。
       const midX = endRect.left + endRect.width/2;
       const midY = endRect.top + endRect.height/2;
 
@@ -785,12 +804,16 @@ function openHeartModal(idx, cardEl){
       env.style.top  = (startRect.top + startRect.height/2 - envStartH/2) + 'px';
       env.style.width = envStartW + 'px';
       env.style.height = envStartH + 'px';
+      env.style.transition =
+        `left .58s ${EASE_OUT}, top .58s ${EASE_OUT}, width .58s ${EASE_OUT}, height .58s ${EASE_OUT}`;
       document.body.appendChild(env);
 
-      // ---- 信紙：一開始很小、藏在信封將要停放的中心點，等信封蓋掀開時再長大抽出來 ----
+      const flapEl = env.querySelector('.flip-env-flap');
+
+      // ---- 信紙：一開始很小、藏在信封將要停放的中心點 ----
       const letter = document.createElement('div');
       letter.className = 'flip-env-letter';
-      const letterStartW = envStartW * 0.4;
+      const letterStartW = envStartW * 0.38;
       const letterStartH = letterStartW * (990/700);
       letter.style.left = (midX - letterStartW/2) + 'px';
       letter.style.top  = (midY - letterStartH/2) + 'px';
@@ -800,7 +823,7 @@ function openHeartModal(idx, cardEl){
 
       cardEl.classList.add('sending');
 
-      // 階段一：信封飛到信紙將出現的位置並放大（維持信封自己的比例，420ms）
+      // 階段一（0ms，580ms）：信封飛到信紙將出現的位置並放大，維持信封自己的比例
       requestAnimationFrame(()=>{
         const envFlyW = endRect.width * 0.92;
         const envFlyH = envFlyW * (2/3);
@@ -810,23 +833,50 @@ function openHeartModal(idx, cardEl){
         env.style.height = envFlyH + 'px';
       });
 
-      // 階段二：信封蓋像真的信封一樣掀開、整個信封淡出，
-      // 同時信紙從信封裡被抽出來，長大到最終停放的大小與位置
+      // 階段二（+120ms 停頓後，維持 340ms）：封口愛心貼紙微微翹起、剝離，
+      // 像真的用手指把貼紙一角撕起來
       setTimeout(()=>{
+        env.classList.add('peel');
+      }, 580 + 120);
+
+      // 階段三（貼紙撕開後再停一下，維持 640ms）：信封蓋像真的信封一樣，
+      // 慢慢往後掀開
+      const flapStart = 580 + 120 + 340 + 90;
+      setTimeout(()=>{
+        flapEl.style.transition = `transform .64s ${EASE_FLAP}`;
         env.classList.add('flip-open');
-        letter.classList.add('show');
+      }, flapStart);
+
+      // 階段四（信封蓋開到一半時）：信紙先從信封口冒出一小截，讓人看到「有東西被抽出來了」
+      const letterPeekStart = flapStart + 260;
+      setTimeout(()=>{
+        letter.style.transition = `left .46s ${EASE_OUT}, top .46s ${EASE_OUT}, opacity .4s ease`;
+        letter.style.opacity = '1';
+        letter.style.top = (parseFloat(letter.style.top) - letterStartH * 0.55) + 'px';
+      }, letterPeekStart);
+
+      // 階段五（信紙冒出來、停頓一下）：整張信紙攤開、長大到最終停放的閱讀大小與位置，
+      // 同時信封整個淡出
+      const letterUnfoldStart = letterPeekStart + 460 + 140;
+      setTimeout(()=>{
+        env.style.transition = `opacity .48s ease`;
+        env.style.opacity = '0';
+        letter.style.transition =
+          `left .62s ${EASE_SETTLE}, top .62s ${EASE_SETTLE}, width .62s ${EASE_SETTLE}, height .62s ${EASE_SETTLE}, opacity .3s ease`;
         letter.style.left = endRect.left + 'px';
         letter.style.top = endRect.top + 'px';
         letter.style.width = endRect.width + 'px';
         letter.style.height = endRect.height + 'px';
-      }, 420);
+      }, letterUnfoldStart);
 
-      // 信紙快抽出來時，底下真正的信紙內容淡入，跟動畫無縫接上
+      // 信紙攤開到一半時，底下真正的信紙內容淡入，跟動畫無縫接上
       setTimeout(()=>{
-        overlay.style.transition = 'opacity .22s ease';
+        overlay.style.transition = 'opacity .26s ease';
         overlay.style.opacity = '1';
-      }, 420 + 260);
+      }, letterUnfoldStart + 280);
 
+      // 全部播完後清理暫時的動畫元素
+      const totalDuration = letterUnfoldStart + 620 + 160;
       setTimeout(()=>{
         env.remove();
         letter.remove();
@@ -835,9 +885,9 @@ function openHeartModal(idx, cardEl){
         overlay.style.pointerEvents = '';
         cardEl.classList.remove('sending');
         cardEl.classList.remove('opening');
-      }, 420 + 480);
+      }, totalDuration);
     });
-  }, 300);
+  }, 320);
 }
 
 function closeHeartModal(){
