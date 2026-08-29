@@ -424,7 +424,7 @@
   .letter-rule{width:46px;height:1px;background:#C9A46E;margin:0 auto 14px;}
   /* 內容（可滑動）— the only part that scrolls; bounded well clear of every decoration */
   .letter-inner{
-    position:absolute;left:16%;right:29%;top:36%;bottom:29%;
+    position:absolute;left:22.5%;right:22.5%;top:36%;bottom:29%;
     overflow-y:auto;overflow-x:hidden;
     -webkit-overflow-scrolling:touch;touch-action:pan-y;
     scrollbar-width:none;-ms-overflow-style:none;
@@ -449,26 +449,31 @@
     transition:left .45s cubic-bezier(.32,.86,.28,1), top .45s cubic-bezier(.32,.86,.28,1),
                width .45s cubic-bezier(.32,.86,.28,1), height .45s cubic-bezier(.32,.86,.28,1);
   }
-  /* 第一階段：愛心飛行途中淡出，變成合起來的信封（實心色塊本體） */
-  .flip-heart{position:absolute;inset:0;z-index:4;transition:opacity .28s ease, transform .28s ease;}
-  .flip-heart svg{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));}
-  .flip-flying .flip-heart{opacity:0;transform:scale(.7);}
-
-  .flip-body{
-    position:absolute;inset:0;z-index:1;border-radius:5px;
-    box-shadow:0 10px 24px rgba(0,0,0,.32);
+  /* 愛心本身就是信封：上半顆、下半顆各是同一張愛心 SVG 的一半，疊起來就是一顆完整愛心 */
+  .flip-heart-top, .flip-heart-bottom{ position:absolute; inset:0; }
+  .flip-heart-top svg, .flip-heart-bottom svg{
+    width:100%;height:100%;display:block;filter:drop-shadow(0 8px 16px rgba(0,0,0,.25));
   }
-
-  /* 第二階段：抵達信紙位置後，信封蓋像真的拆信一樣往後翻開 */
-  .flip-flap{
-    position:absolute;left:0;top:0;width:100%;height:50%;z-index:3;
-    clip-path:polygon(0 0, 100% 0, 50% 100%);
-    -webkit-clip-path:polygon(0 0, 100% 0, 50% 100%);
-    transform-origin:top center;
-    transform-style:preserve-3d;
-    transition:transform .38s cubic-bezier(.4,.4,.3,1), opacity .18s ease .2s;
+  /* 上半顆：關閉時蓋住上半，打開時像信封蓋一樣往後掀 */
+  .flip-heart-top{
+    z-index:3;
+    clip-path:inset(0 0 50% 0);
+    -webkit-clip-path:inset(0 0 50% 0);
+    transform-origin:50% 50%;
+    transition:transform .42s cubic-bezier(.4,.4,.3,1), opacity .2s ease .18s;
   }
-  .flip-open .flip-flap{transform:rotateX(150deg);opacity:0;}
+  .flip-open .flip-heart-top{
+    transform:rotateX(150deg) translateY(-4%);
+    opacity:0;
+  }
+  /* 下半顆：打開時淡出，讓信紙completely浮現 */
+  .flip-heart-bottom{
+    z-index:1;
+    clip-path:inset(50% 0 0 0);
+    -webkit-clip-path:inset(50% 0 0 0);
+    transition:opacity .3s ease .22s;
+  }
+  .flip-open .flip-heart-bottom{opacity:0;}
 
   .flip-letter{
     position:absolute;inset:0;z-index:2;border-radius:5px;overflow:hidden;
@@ -744,41 +749,57 @@ function openHeartModal(idx, cardEl){
       // 注意：這裡先不把 overlay 顯示出來，要等信封動畫整段播完才淡入，
       // 不然 overlay（z-index 1000）會立刻蓋住還在飛的信封（z-index 30）。
 
+      // 中繼點：愛心先長大，但維持「愛心」的比例，不要一開始就拉成長條信紙
+      const heartW = endRect.width * 0.62;
+      const heartH = heartW * (29/32);
+      const midX = endRect.left + endRect.width/2;
+      const midY = endRect.top + endRect.height/2;
+      const heartRect = {
+        left: midX - heartW/2,
+        top: midY - heartH/2,
+        width: heartW,
+        height: heartH
+      };
+
       const flip = document.createElement('div');
       flip.className = 'flip-envelope';
       flip.style.left = startRect.left + 'px';
       flip.style.top = startRect.top + 'px';
       flip.style.width = startRect.width + 'px';
       flip.style.height = startRect.height + 'px';
-      // 由下到上疊放：信封本體 → 信紙 → 信封蓋（蓋住信紙）→ 愛心（飛行途中淡出）
+      // 由下到上疊放：信紙 → 愛心下半顆 → 愛心上半顆（上下兩半合起來剛好是完整的一顆愛心）
       flip.innerHTML = `
-        <div class="flip-body" style="background:${heartColor}"></div>
         <div class="flip-letter"></div>
-        <div class="flip-flap" style="background:${heartColor}"></div>
-        <div class="flip-heart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
+        <div class="flip-heart-bottom"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
+        <div class="flip-heart-top"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="${HEART_PATH}" fill="${heartColor}"/></svg></div>
       `;
       document.body.appendChild(flip);
       cardEl.classList.add('sending');
 
-      // 階段一：愛心飛向信紙的位置，途中淡化成合起來的信封（450ms）
+      // 階段一：愛心飛向信紙的位置並放大，但還是一顆完整的愛心（450ms）
       requestAnimationFrame(()=>{
         flip.classList.add('flip-flying');
+        flip.style.left = heartRect.left + 'px';
+        flip.style.top = heartRect.top + 'px';
+        flip.style.width = heartRect.width + 'px';
+        flip.style.height = heartRect.height + 'px';
+      });
+
+      // 階段二：愛心從中間裂開，上半顆像信封蓋一樣往上往後掀開，
+      // 同時整個範圍撐開成信紙的大小，信紙從裡面浮現出來
+      setTimeout(()=>{
+        flip.classList.add('flip-open');
         flip.style.left = endRect.left + 'px';
         flip.style.top = endRect.top + 'px';
         flip.style.width = endRect.width + 'px';
         flip.style.height = endRect.height + 'px';
-      });
-
-      // 階段二：一抵達，信封蓋立刻像拆信一樣往後翻開，信紙從裡面浮現
-      setTimeout(()=>{
-        flip.classList.add('flip-open');
       }, 450);
 
-      // 信封蓋翻開到一半時，底下真正的信紙淡入，跟動畫無縫接上
+      // 開到一半時，底下真正的信紙淡入，跟動畫無縫接上
       setTimeout(()=>{
         overlay.style.transition = 'opacity .22s ease';
         overlay.style.opacity = '1';
-      }, 450 + 240);
+      }, 450 + 250);
 
       setTimeout(()=>{
         flip.remove();
@@ -787,7 +808,7 @@ function openHeartModal(idx, cardEl){
         overlay.style.pointerEvents = '';
         cardEl.classList.remove('sending');
         cardEl.classList.remove('opening');
-      }, 450 + 440);
+      }, 450 + 470);
     });
   }, 300);
 }
