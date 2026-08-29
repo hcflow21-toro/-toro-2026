@@ -480,8 +480,8 @@
   }
   /* 信封口內側的一點陰影，暗示信紙是從信封「裡面」被抽出來的，增加立體感 */
   .flip-env-body::before{
-    content:'';position:absolute;left:4%;right:4%;top:0;height:32%;
-    background:linear-gradient(180deg, rgba(20,32,28,.22), rgba(20,32,28,0));
+    content:'';position:absolute;left:4%;right:4%;top:0;height:12%;
+    background:linear-gradient(180deg, rgba(20,32,28,.09), rgba(20,32,28,0));
     pointer-events:none;
   }
   /* 封口愛心：位置、大小對齊照片裡真正的愛心貼紙，上下兩顆各自被 flap／body 的
@@ -855,12 +855,19 @@ function openHeartModal(idx, cardEl){
         letter.style.top = (parseFloat(letter.style.top) - letterStartH * 0.55) + 'px';
       }, letterPeekStart);
 
-      // 階段五（信紙冒出來、停頓一下）：整張信紙攤開、長大到最終停放的閱讀大小與位置，
-      // 同時信封整個淡出
+      // 階段四之後不久：信封蓋因為 rotateX 已經轉過 90 度、被 backface-visibility 整個藏起來了，
+      // 只剩信封本體（口袋）孤零零留在畫面上。趁信紙才剛冒出頭、視線還在信紙上時，
+      // 就讓整個信封（蓋子＋口袋）一起淡出，不要等到信紙完全攤開才淡出——
+      // 不然口袋會像被撕開一半、單獨浮著那麼久，才會看起來像「信封剩一半飛出信紙」。
+      const envFadeStart = letterPeekStart + 200;
+      setTimeout(()=>{
+        env.style.transition = `opacity .4s ease`;
+        env.style.opacity = '0';
+      }, envFadeStart);
+
+      // 階段五（信紙冒出來、停頓一下）：整張信紙攤開、長大到最終停放的閱讀大小與位置
       const letterUnfoldStart = letterPeekStart + 460 + 140;
       setTimeout(()=>{
-        env.style.transition = `opacity .48s ease`;
-        env.style.opacity = '0';
         letter.style.transition =
           `left .62s ${EASE_SETTLE}, top .62s ${EASE_SETTLE}, width .62s ${EASE_SETTLE}, height .62s ${EASE_SETTLE}, opacity .3s ease`;
         letter.style.left = endRect.left + 'px';
