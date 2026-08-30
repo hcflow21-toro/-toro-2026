@@ -489,8 +489,15 @@
   .flip-env-flap{
     z-index:29; /* 翻到信紙後面：開封後仍完整可見，但不會擋住信紙 */
     border-radius:7px 7px 0 0;
-    transform-origin:50% 100%;
-    transition:transform .46s cubic-bezier(.22,.61,.32,1), filter .46s ease;
+    /* 關鍵修正：hinge（轉軸）要放在信封蓋「自己的頂邊」，也就是整個信封最上緣那條線——
+       這才是真實信封蓋摺起來的地方。之前寫成 50% 100%（蓋子底部＝封口貼紙那條線）
+       會讓蓋子繞著封口線旋轉，視覺上像整個上半段被平移／裁切掉，而不是「掀開」。
+       改成 50% 0% 並搭配下面的 3D rotateX，蓋子才會像用手指掀開信封蓋一樣，
+       繞著頂邊往後翻開。 */
+    transform-origin:50% 0%;
+    transform-style:preserve-3d;
+    backface-visibility:hidden;
+    transition:transform .52s cubic-bezier(.32,.06,.34,1), filter .52s ease;
   }
   .flip-env-flap-bg{
     position:absolute;inset:0;
@@ -498,11 +505,12 @@
     background-repeat:no-repeat;background-size:100% auto;background-position:left top;
   }
   .flip-env-flap.flip-open{
-    /* 蓋子往後、往上翻開，維持原本大小與完整外觀（不淡出、不消失），
-       只是往上移開讓出信封開口，之後大部分會被抽出來的信紙擋在前面，
-       只在信紙兩側／上方露出一截，看起來像蓋子翻到信紙背後 */
-    transform:translateY(-60%) rotate(-3deg) scale(0.97);
-    filter:drop-shadow(0 14px 26px rgba(0,0,0,.32)) brightness(0.93);
+    /* 蓋子繞著頂邊的轉軸往後、往上掀開（像真的用手指打開信封封口一樣），
+       而不是整片平移消失。轉過去之後蓋子翻到信紙後方、正面朝下貼著信封背面，
+       backface-visibility:hidden 讓翻過去看不到的那一面自然「藏」起來，
+       視覺上就是蓋子掀開、露出信封開口，而不是整個上半段憑空不見。 */
+    transform:perspective(1400px) rotateX(-122deg);
+    filter:drop-shadow(0 10px 18px rgba(0,0,0,.36)) brightness(0.82);
   }
   /* 信封口內側的一點陰影，暗示信紙是從信封「裡面」被抽出來的，增加立體感 */
   .flip-env-body::before{
@@ -846,9 +854,19 @@ function openHeartModal(idx, cardEl){
       // 各自照裁切比例分到對應的高度，動畫時直接呼叫這個函式即可同步移動兩者
       function layoutEnvelope(left, top, width, height, withTransition){
         const flapH = height * FLAP_FRAC, bodyH = height * BODY_FRAC;
+        // 注意：flapEl 除了 left/top/width/height 之外，稍後開封時還要靠
+        // transform + filter 做「掀開」動畫（見 .flip-env-flap.flip-open）。
+        // 這裡如果只把 transition 設成 left/top/width/height，會直接覆蓋掉
+        // CSS 類別裡原本 transform/filter 的 transition 設定，導致之後加上
+        // flip-open 這個 class 時 transform 完全沒有補間、瞬間跳過去——
+        // 看起來就像信封蓋「憑空消失」而不是慢慢掀開。所以這裡把 transform、
+        // filter 的補間也一起寫進同一個 transition 字串，確保兩種動畫都會生效。
+        const trFlap = withTransition
+          ? `left .52s ${EASE_OUT}, top .52s ${EASE_OUT}, width .52s ${EASE_OUT}, height .52s ${EASE_OUT}, transform .52s cubic-bezier(.32,.06,.34,1), filter .52s ease`
+          : 'none';
         const tr = withTransition
           ? `left .52s ${EASE_OUT}, top .52s ${EASE_OUT}, width .52s ${EASE_OUT}, height .52s ${EASE_OUT}` : 'none';
-        flapEl.style.transition = tr;
+        flapEl.style.transition = trFlap;
         flapEl.style.left = left + 'px';
         flapEl.style.top = top + 'px';
         flapEl.style.width = width + 'px';
