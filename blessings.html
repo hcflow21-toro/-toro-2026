@@ -460,44 +460,49 @@
   }
 
   /* ---------- 開信封動畫（真實信封照片 → 信紙）----------
-     信封圖檔本身的長寬比是 1536:1024（3:2）。
-     信封蓋（flap）與信封本體（body）用同一張圖、兩個各自 overflow:hidden 的容器裁切而成，
-     不用另外切圖：flap 顯示圖片上方 57.03%，body 顯示圖片下方 42.97%，
-     這個切點剛好落在封口愛心貼紙的正中間，所以愛心上半顆隨 flap 掀開、
-     下半顆留在 body 上 —— 就像真的把封口貼紙撕開一樣。
-     愛心貼紙的顏色用留言當初選的顏色，蓋在照片原本的粉色愛心上面。 */
-  /* 信封蓋刻意不用 3D rotateX 掀開：3D 透視在手機瀏覽器上很容易因為
-     transform-origin／perspective 沒對齊而讓蓋子甩到奇怪的地方，或是轉過
-     90 度後因為 backface-visibility 整個「消失」，只留信封本體孤零零卡在畫面
-     上——這正是先前「信封只剩一半」的成因。改成單純 2D 的上移＋淡出＋微旋轉，
-     視覺上一樣是「蓋子被掀開拿走」的感覺，但完全不會有透視或背面消失的問題。
-     各階段的動畫時長／緩動都改由 JS 在對的時間點用 inline style／class 設定，
-     這樣「飛入 → 撕開封口貼紙 → 信封蓋掀開 → 信紙分三段被抽出來 → 攤開閱讀」
-     每一段才能各自有不同的速度與停頓，堆疊出收到信、慢慢拆信的感覺。 */
-  .flip-env{
-    position:fixed;z-index:31;pointer-events:none;
-    filter:drop-shadow(0 18px 32px rgba(0,0,0,.35));
-  }
+     信封圖檔本身的長寬比是 1536:1024（3:2）。信封蓋（flap）與信封本體（body）
+     用同一張照片、各自 overflow:hidden 裁出上 57.03% ／下 42.97%，裁切點剛好
+     落在封口愛心貼紙正中間，所以愛心上半顆隨 flap、下半顆留在 body 上——
+     像真的把封口貼紙撕開一樣。
 
+     flap／body 刻意「不」包在同一個容器裡、也不用 3D rotateX 掀開：
+     - 如果兩者共用一個容器、疊在同一個 z-index，蓋子掀開時只要一淡出，
+       整封信看起來就像「上半部憑空消失、只剩下半信封」。
+     - 如果改用 3D rotateX 翻轉，轉過 90 度後 backface-visibility 會讓蓋子
+       整個消失不見，一樣只留信封本體孤零零卡在畫面上。
+     正確流程應該是：封口打開後，信封蓋要「翻到後面、但整封信仍然完整可見」，
+     信紙才從中間的開口被抽出來，最後才是整封信（蓋子+本體）一起淡出。
+     所以這裡讓 flap／body 各自獨立、有各自的 z-index：body 蓋在信紙前面
+     （擋住還沒抽出來的下半段），flap 則翻到信紙「後面」，變成信紙背後露出的
+     一小截信封蓋——兩者全程都維持完整不透明，不會有任何一半消失不見，
+     直到信紙完全抽出來後，才讓 flap + body 一起淡出。 */
+  .flip-env-flap, .flip-env-body{
+    position:fixed;pointer-events:none;overflow:hidden;
+    filter:drop-shadow(0 14px 26px rgba(0,0,0,.32));
+  }
   .flip-env-body{
-    position:absolute;left:0;right:0;bottom:0;height:42.97%;overflow:hidden;
+    z-index:31; /* 蓋在信紙前面：信紙還沒抽出來的部分要被它擋住 */
     border-radius:0 0 7px 7px;
     background-image:url('envelope.png');
     background-repeat:no-repeat;background-size:100% auto;background-position:left bottom;
   }
   .flip-env-flap{
-    position:absolute;left:0;right:0;top:0;height:57.03%;overflow:hidden;
+    z-index:29; /* 翻到信紙後面：開封後仍完整可見，但不會擋住信紙 */
     border-radius:7px 7px 0 0;
-    transform-origin:50% 0%;
-  }
-  .flip-env.flip-open .flip-env-flap{
-    transform:translateY(-56%) rotate(-8deg) scale(0.92);
-    opacity:0;
+    transform-origin:50% 100%;
+    transition:transform .46s cubic-bezier(.22,.61,.32,1), filter .46s ease;
   }
   .flip-env-flap-bg{
     position:absolute;inset:0;
     background-image:url('envelope.png');
     background-repeat:no-repeat;background-size:100% auto;background-position:left top;
+  }
+  .flip-env-flap.flip-open{
+    /* 蓋子往後、往上翻開，維持原本大小與完整外觀（不淡出、不消失），
+       只是往上移開讓出信封開口，之後大部分會被抽出來的信紙擋在前面，
+       只在信紙兩側／上方露出一截，看起來像蓋子翻到信紙背後 */
+    transform:translateY(-60%) rotate(-3deg) scale(0.97);
+    filter:drop-shadow(0 14px 26px rgba(0,0,0,.32)) brightness(0.93);
   }
   /* 信封口內側的一點陰影，暗示信紙是從信封「裡面」被抽出來的，增加立體感 */
   .flip-env-body::before{
@@ -515,19 +520,20 @@
   .flip-env-seal-top{ left:44.9%; width:9.7%; top:89.55%; height:20.9%; }
   .flip-env-seal-bottom{ left:44.9%; width:9.7%; top:-13.86%; height:27.72%; }
   /* 撕開封口貼紙：上下兩半微微翹起、分開，像真的把貼紙撕開一角 */
-  .flip-env.peel .flip-env-seal-top{
+  .flip-env-flap.peel .flip-env-seal-top{
     transform:translate(-4%,-8%) rotate(-9deg) scale(1.05);
     filter:brightness(1.2) drop-shadow(0 3px 5px rgba(0,0,0,.28));
   }
-  .flip-env.peel .flip-env-seal-bottom{
+  .flip-env-body.peel .flip-env-seal-bottom{
     transform:translate(3%,4%) rotate(5deg) scale(1.03);
     filter:brightness(1.08);
   }
 
-  /* 信紙：全程維持信封裡的固定大小（不會忽大忽小走樣），z-index 比信封本體(31)低，
-     所以只要信紙還沒被拉高過信封開口那條摺線，就會被信封本體的照片自然「擋住」，
-     真的有紙從信封裡被一段一段抽出來的感覺；分三段（約 1/3 → 2/3 → 完全抽離）
-     往上抽出，抽完才整張放大、移動到最終閱讀的大小與位置。 */
+  /* 信紙：全程維持信封裡的固定大小（不會忽大忽小走樣），z-index 夾在信封本體
+     (31) 與信封蓋 (29) 中間——本體自然擋住信紙還沒抽出來的部分，信封蓋翻開後
+     則在信紙背後完整露出一截，兩者都不會消失，真的有紙從信封裡被一段一段
+     抽出來的感覺；分三段（約 1/3 → 2/3 → 完全抽離）往上抽出，抽完才整張放大、
+     移動到最終閱讀的大小與位置。 */
   .flip-env-letter{
     position:fixed;z-index:30;pointer-events:none;border-radius:5px;overflow:hidden;
     background-image:url('letter-paper.jpg');
@@ -821,49 +827,65 @@ function openHeartModal(idx, cardEl){
       const midY = endRect.top + endRect.height/2;
 
       // ---- 信封：從留言小卡的位置飛出來，過程中維持信封照片自己的長寬比（3:2），
-      // 不會被硬拉成信紙的直式比例，才不會走樣 ----
-      const env = document.createElement('div');
-      env.className = 'flip-env';
-      env.innerHTML =
-        '<div class="flip-env-body">' +
-          '<div class="flip-env-seal-bottom"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="'+HEART_PATH+'" fill="'+heartColor+'"/></svg></div>' +
-        '</div>' +
-        '<div class="flip-env-flap">' +
-          '<div class="flip-env-flap-bg"></div>' +
-          '<div class="flip-env-seal-top"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="'+HEART_PATH+'" fill="'+heartColor+'"/></svg></div>' +
-        '</div>';
+      // 不會被硬拉成信紙的直式比例，才不會走樣。flap／body 各自獨立（見上面
+      // CSS 的說明），用同一組座標算出來，飛的時候兩個一起移動、看起來像同一封信 ----
+      const flapEl = document.createElement('div');
+      flapEl.className = 'flip-env-flap';
+      flapEl.innerHTML =
+        '<div class="flip-env-flap-bg"></div>' +
+        '<div class="flip-env-seal-top"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="'+HEART_PATH+'" fill="'+heartColor+'"/></svg></div>';
+      const bodyEl = document.createElement('div');
+      bodyEl.className = 'flip-env-body';
+      bodyEl.innerHTML =
+        '<div class="flip-env-seal-bottom"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="'+HEART_PATH+'" fill="'+heartColor+'"/></svg></div>';
+      document.body.appendChild(flapEl);
+      document.body.appendChild(bodyEl);
+
+      const FLAP_FRAC = 0.5703, BODY_FRAC = 0.4297; // 對齊 envelope.png 裡封口貼紙正中間的裁切比例
+      // 把 flap／body 一起擺到某個「整封信」的矩形範圍（left/top/width/height），
+      // 各自照裁切比例分到對應的高度，動畫時直接呼叫這個函式即可同步移動兩者
+      function layoutEnvelope(left, top, width, height, withTransition){
+        const flapH = height * FLAP_FRAC, bodyH = height * BODY_FRAC;
+        const tr = withTransition
+          ? `left .52s ${EASE_OUT}, top .52s ${EASE_OUT}, width .52s ${EASE_OUT}, height .52s ${EASE_OUT}` : 'none';
+        flapEl.style.transition = tr;
+        flapEl.style.left = left + 'px';
+        flapEl.style.top = top + 'px';
+        flapEl.style.width = width + 'px';
+        flapEl.style.height = flapH + 'px';
+        bodyEl.style.transition = tr;
+        bodyEl.style.left = left + 'px';
+        bodyEl.style.top = (top + flapH) + 'px';
+        bodyEl.style.width = width + 'px';
+        bodyEl.style.height = bodyH + 'px';
+      }
+
       const envStartW = startRect.width * 1.55;
       const envStartH = envStartW * (2/3);
-      env.style.left = (startRect.left + startRect.width/2 - envStartW/2) + 'px';
-      env.style.top  = (startRect.top + startRect.height/2 - envStartH/2) + 'px';
-      env.style.width = envStartW + 'px';
-      env.style.height = envStartH + 'px';
-      env.style.transition =
-        `left .52s ${EASE_OUT}, top .52s ${EASE_OUT}, width .52s ${EASE_OUT}, height .52s ${EASE_OUT}`;
-      document.body.appendChild(env);
-
-      const flapEl = env.querySelector('.flip-env-flap');
-      const bodyEl = env.querySelector('.flip-env-body');
+      layoutEnvelope(
+        startRect.left + startRect.width/2 - envStartW/2,
+        startRect.top + startRect.height/2 - envStartH/2,
+        envStartW, envStartH, false
+      );
 
       cardEl.classList.add('sending');
 
       // 階段一（0ms，520ms）：信封飛到信紙將出現的位置並放大，維持信封自己的比例
       const envFlyW = endRect.width * 0.92;
       const envFlyH = envFlyW * (2/3);
+      const envTop = midY - envFlyH/2;
+      const envLeft = midX - envFlyW/2;
       requestAnimationFrame(()=>{
-        env.style.left = (midX - envFlyW/2) + 'px';
-        env.style.top  = (midY - envFlyH/2) + 'px';
-        env.style.width = envFlyW + 'px';
-        env.style.height = envFlyH + 'px';
+        layoutEnvelope(envLeft, envTop, envFlyW, envFlyH, true);
       });
 
-      // ---- 信紙：全程固定大小（信封裡看到的大小），一開始整張都還「藏」在信封本體
-      // 開口摺線以下，靠 z-index 比信封本體低，自然被信封本體的照片擋住。
-      // 之後只要往上移動，露出摺線以上的部分就是被抽出來的量，不需要另外裁切。 ----
+      // ---- 信紙：全程固定大小（信封裡看到的大小），z-index 夾在信封本體(31)與
+      // 信封蓋(29) 之間：一開始整張都還「藏」在信封本體開口摺線以下，被本體
+      // 的照片自然擋住；之後只要往上移動，露出摺線以上的部分就是被抽出來的量，
+      // 不需要另外裁切，本體也全程保持完整不透明，不會有任何一半消失不見。 ----
       const letterW = envFlyW * 0.74;
       const letterH = letterW * (990/700);
-      const envTop = midY - envFlyH/2;
-      const foldLineY = envTop + envFlyH * 0.5703; // 信封本體(口袋)開口那條摺線的 Y 座標
+      const foldLineY = envTop + envFlyH * FLAP_FRAC; // 信封本體(口袋)開口那條摺線的 Y 座標
       const letterLeft = midX - letterW/2;
       const letterTopAtExposed = (exposedFrac)=> foldLineY - letterH * exposedFrac;
 
@@ -878,14 +900,12 @@ function openHeartModal(idx, cardEl){
       // 階段二（+100ms 停頓後，維持 300ms）：封口愛心貼紙微微翹起、剝離，
       // 像真的用手指把貼紙一角撕起來
       const peelStart = 520 + 100;
-      setTimeout(()=>{ env.classList.add('peel'); }, peelStart);
+      setTimeout(()=>{ flapEl.classList.add('peel'); bodyEl.classList.add('peel'); }, peelStart);
 
-      // 階段三（貼紙撕開後再停一下，維持 460ms）：信封蓋掀開、淡出離開視線
+      // 階段三（貼紙撕開後再停一下，維持 460ms）：信封蓋翻開、往上移到信紙背後，
+      // 全程維持完整不透明，不淡出、不消失
       const flapStart = peelStart + 300 + 80;
-      setTimeout(()=>{
-        flapEl.style.transition = `transform .46s ${EASE_FLAP}, opacity .46s ${EASE_FLAP}`;
-        env.classList.add('flip-open');
-      }, flapStart);
+      setTimeout(()=>{ flapEl.classList.add('flip-open'); }, flapStart);
 
       // 階段四：信紙分三段被抽出來，每段之間停頓一下，讓「一段一段把信抽出來」的
       // 動作看得清楚，而不是一次跳到底
@@ -916,12 +936,14 @@ function openHeartModal(idx, cardEl){
         letter.style.top = letterTopAtExposed(1.12) + 'px'; // 完全抽離信封
       }, step3Start);
 
-      // 階段五：信紙已完全離開信封，這時信封（本體＋蓋子）整個淡出，
-      // 因為信紙已經不再需要被信封擋住任何部分，不會再有「信封只剩一半」的畫面
+      // 階段五：信紙已完全離開信封，這時信封（本體＋蓋子）才一起整個淡出——
+      // 兩者是同時、以同樣方式消失，不會有「只剩一半」的畫面
       const envFadeStart = step3Start + step3Dur + 130;
       setTimeout(()=>{
-        env.style.transition = `opacity .34s ease`;
-        env.style.opacity = '0';
+        flapEl.style.transition = `opacity .34s ease`;
+        bodyEl.style.transition = `opacity .34s ease`;
+        flapEl.style.opacity = '0';
+        bodyEl.style.opacity = '0';
       }, envFadeStart);
 
       // 階段六（與信封淡出小幅重疊，銜接更順）：信紙整張放大、移動到最終
@@ -949,7 +971,8 @@ function openHeartModal(idx, cardEl){
       // 全部播完後清理暫時的動畫元素
       const totalDuration = letterUnfoldStart + letterUnfoldDur + 160;
       setTimeout(()=>{
-        env.remove();
+        flapEl.remove();
+        bodyEl.remove();
         letter.remove();
         backdrop.remove();
         overlay.style.transition = '';
@@ -966,7 +989,7 @@ function closeHeartModal(){
   document.getElementById('heartModalOverlay').classList.remove('show');
   // 保險：如果使用者在拆信封動畫還沒播完時就把 modal 關掉，
   // 順手把還沒被清掉的暫時背景幕也一併移除，避免留下一層擋住畫面的暗幕。
-  document.querySelectorAll('.flip-env-backdrop, .flip-env, .flip-env-letter').forEach(el=>el.remove());
+  document.querySelectorAll('.flip-env-backdrop, .flip-env-flap, .flip-env-body, .flip-env-letter').forEach(el=>el.remove());
 }
 
 document.getElementById('heartModalClose').addEventListener('click', closeHeartModal);
