@@ -489,15 +489,10 @@
   .flip-env-flap{
     z-index:29; /* 翻到信紙後面：開封後仍完整可見，但不會擋住信紙 */
     border-radius:7px 7px 0 0;
-    /* 關鍵修正：hinge（轉軸）要放在信封蓋「自己的頂邊」，也就是整個信封最上緣那條線——
-       這才是真實信封蓋摺起來的地方。之前寫成 50% 100%（蓋子底部＝封口貼紙那條線）
-       會讓蓋子繞著封口線旋轉，視覺上像整個上半段被平移／裁切掉，而不是「掀開」。
-       改成 50% 0% 並搭配下面的 3D rotateX，蓋子才會像用手指掀開信封蓋一樣，
-       繞著頂邊往後翻開。 */
+    /* hinge（轉軸）放在信封蓋「自己的頂邊」，也就是整個信封最上緣那條線——
+       這才是真實信封蓋摺起來的地方。 */
     transform-origin:50% 0%;
-    transform-style:preserve-3d;
-    backface-visibility:hidden;
-    transition:transform .52s cubic-bezier(.32,.06,.34,1), filter .52s ease;
+    transition:transform .5s ease, filter .5s ease;
   }
   .flip-env-flap-bg{
     position:absolute;inset:0;
@@ -505,12 +500,16 @@
     background-repeat:no-repeat;background-size:100% auto;background-position:left top;
   }
   .flip-env-flap.flip-open{
-    /* 蓋子繞著頂邊的轉軸往後、往上掀開（像真的用手指打開信封封口一樣），
-       而不是整片平移消失。轉過去之後蓋子翻到信紙後方、正面朝下貼著信封背面，
-       backface-visibility:hidden 讓翻過去看不到的那一面自然「藏」起來，
-       視覺上就是蓋子掀開、露出信封開口，而不是整個上半段憑空不見。 */
-    transform:perspective(1400px) rotateX(-122deg);
-    filter:drop-shadow(0 10px 18px rgba(0,0,0,.36)) brightness(0.82);
+    /* 改用純 2D 的「垂直鏡射」取代先前的 3D rotateX + perspective。
+       3D transform（rotateX/perspective/backface-visibility）在部分手機瀏覽器 /
+       WebView 上會直接失效或整個消失，退回成「沒有補間、瞬間跳到終點」的樣子，
+       視覺上就跟被裁成兩半沒兩樣——這正是上一版在你手機上出現的問題。
+       scaleY(-1) 是單純的 2D 矩陣運算，任何瀏覽器都保證正確渲染：
+       因為轉軸釘在信封蓋自己的頂邊（也就是整個信封最上緣），鏡射之後，
+       蓋子會整個翻到那條線的「上方」，效果就是蓋子往後掀開、翹到信封後上方，
+       跟你參考圖裡「上蓋向後翻開」的效果一致，而且不會有任何裁切感。 */
+    transform:scaleY(-1);
+    filter:drop-shadow(0 -10px 16px rgba(0,0,0,.3)) brightness(0.88);
   }
   /* 信封口內側的一點陰影，暗示信紙是從信封「裡面」被抽出來的，增加立體感 */
   .flip-env-body::before{
