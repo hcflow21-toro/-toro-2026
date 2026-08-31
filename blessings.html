@@ -896,15 +896,24 @@ function openHeartModal(idx, cardEl){
         layoutEnvelope(envLeft, envTop, envFlyW, envFlyH, true);
       });
 
-      // ---- 信紙：全程固定大小（信封裡看到的大小），z-index 夾在信封本體(31)與
-      // 信封蓋(29) 之間：一開始整張都還「藏」在信封本體開口摺線以下，被本體
-      // 的照片自然擋住；之後只要往上移動，露出摺線以上的部分就是被抽出來的量，
-      // 不需要另外裁切，本體也全程保持完整不透明，不會有任何一半消失不見。 ----
+      // ---- 信紙：全程固定大小（信封裡看到的大小）。
+      // 重要修正：信紙卡片本身比信封本體高很多，光靠「信封本體疊在上面」
+      // 沒辦法真的擋住信紙沒被抽出來的那一截——本體只蓋到信封下緣，信紙比
+      // 信封下緣還長的部分，本體完全遮不到，就會整段從信封下方穿出來，
+      // 這正是使用者截圖裡看到的問題。正確做法是用 clip-path 把信紙「摺線
+      // 以下」的部分直接裁掉、完全不畫出來（就像真的還收在信封口袋裡一樣），
+      // 而不是指望其他元素剛好把它擋住。裁切量由 exposedFrac 直接換算，
+      // exposedFrac=0 時整張都被裁掉（等於完全在信封裡），exposedFrac=1 時
+      // 完全不裁（等於整張都已抽出）。 ----
       const letterW = envFlyW * 0.74;
       const letterH = letterW * (990/700);
       const foldLineY = envTop + envFlyH * FLAP_FRAC; // 信封本體(口袋)開口那條摺線的 Y 座標
       const letterLeft = midX - letterW/2;
       const letterTopAtExposed = (exposedFrac)=> foldLineY - letterH * exposedFrac;
+      const letterClipAtExposed = (exposedFrac)=>{
+        const bottomCut = Math.max(0, (1 - exposedFrac) * letterH);
+        return `inset(0px 0px ${bottomCut}px 0px)`;
+      };
 
       const letter = document.createElement('div');
       letter.className = 'flip-env-letter';
@@ -912,6 +921,7 @@ function openHeartModal(idx, cardEl){
       letter.style.width = letterW + 'px';
       letter.style.height = letterH + 'px';
       letter.style.top = letterTopAtExposed(0) + 'px'; // exposedFrac=0：完全藏在信封本體後面
+      letter.style.clipPath = letterClipAtExposed(0); // 摺線以下整段先裁掉，確保不會穿出信封
       document.body.appendChild(letter);
 
       // 階段二（+100ms 停頓後，維持 300ms）：封口愛心貼紙微微翹起、剝離，
@@ -928,29 +938,32 @@ function openHeartModal(idx, cardEl){
       // 動作看得清楚，而不是一次跳到底
       const letterFadeInStart = flapStart + 160;
       setTimeout(()=>{
-        letter.style.transition = `top .3s ${EASE_OUT}, opacity .3s ease`;
+        letter.style.transition = `top .3s ${EASE_OUT}, clip-path .3s ${EASE_OUT}, opacity .3s ease`;
         letter.style.opacity = '1';
       }, letterFadeInStart);
 
       const step1Start = letterFadeInStart;
       const step1Dur = 230;
       setTimeout(()=>{
-        letter.style.transition = `top ${step1Dur}ms ${EASE_OUT}`;
+        letter.style.transition = `top ${step1Dur}ms ${EASE_OUT}, clip-path ${step1Dur}ms ${EASE_OUT}`;
         letter.style.top = letterTopAtExposed(0.34) + 'px'; // 抽出約 1/3
+        letter.style.clipPath = letterClipAtExposed(0.34);
       }, step1Start);
 
       const step2Start = step1Start + step1Dur + 110;
       const step2Dur = 230;
       setTimeout(()=>{
-        letter.style.transition = `top ${step2Dur}ms ${EASE_OUT}`;
+        letter.style.transition = `top ${step2Dur}ms ${EASE_OUT}, clip-path ${step2Dur}ms ${EASE_OUT}`;
         letter.style.top = letterTopAtExposed(0.68) + 'px'; // 抽出約 2/3
+        letter.style.clipPath = letterClipAtExposed(0.68);
       }, step2Start);
 
       const step3Start = step2Start + step2Dur + 110;
       const step3Dur = 250;
       setTimeout(()=>{
-        letter.style.transition = `top ${step3Dur}ms ${EASE_OUT}`;
+        letter.style.transition = `top ${step3Dur}ms ${EASE_OUT}, clip-path ${step3Dur}ms ${EASE_OUT}`;
         letter.style.top = letterTopAtExposed(1.12) + 'px'; // 完全抽離信封
+        letter.style.clipPath = letterClipAtExposed(1.12);
       }, step3Start);
 
       // 階段五：信紙已完全離開信封，這時信封（本體＋蓋子）才一起整個淡出——
@@ -968,6 +981,10 @@ function openHeartModal(idx, cardEl){
       const letterUnfoldStart = envFadeStart + 100;
       const letterUnfoldDur = 560;
       setTimeout(()=>{
+        // 這時信紙已經完全抽出（exposedFrac=1.12，已經沒有裁切），接下來只是
+        // 放大移動到閱讀位置。先把 clip-path 清掉，避免尺寸改變後舊的裁切
+        // 數值（用舊的 letterH 算出來的 px）套用到新尺寸上造成裁切錯位。
+        letter.style.clipPath = 'none';
         letter.style.transition =
           `left ${letterUnfoldDur}ms ${EASE_SETTLE}, top ${letterUnfoldDur}ms ${EASE_SETTLE}, width ${letterUnfoldDur}ms ${EASE_SETTLE}, height ${letterUnfoldDur}ms ${EASE_SETTLE}`;
         letter.style.left = endRect.left + 'px';
