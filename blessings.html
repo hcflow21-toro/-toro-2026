@@ -480,6 +480,15 @@
     position:fixed;pointer-events:none;overflow:hidden;
     filter:drop-shadow(0 14px 26px rgba(0,0,0,.32));
   }
+  /* 完整信封形狀的背板，永遠釘在原地不參與掀開動畫，只負責在 flap/body
+     之間任何瞬間的空隙裡補上信封照片本身，不讓底下的深色頁面背景透出來。
+     見下面 JS 建立 backingEl 的註解。 */
+  .flip-env-backing{
+    position:fixed;pointer-events:none;overflow:hidden;z-index:27;
+    border-radius:7px;
+    background-image:url('envelope.png');
+    background-repeat:no-repeat;background-size:100% 100%;background-position:center;
+  }
   .flip-env-body{
     z-index:31; /* 蓋在信紙前面：信紙還沒抽出來的部分要被它擋住 */
     border-radius:0 0 7px 7px;
@@ -845,6 +854,16 @@ function openHeartModal(idx, cardEl){
       bodyEl.className = 'flip-env-body';
       bodyEl.innerHTML =
         '<div class="flip-env-seal-bottom"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="'+HEART_PATH+'" fill="'+heartColor+'"/></svg></div>';
+      // 信封「背板」：完整信封形狀、永遠不動、疊在 flap 和 body 後面。
+      // 原因：flap 掀開用 scaleY(-1) 做鏡射，動畫中間一定會經過「壓扁成一條線」
+      // 的瞬間（這是 scaleY 從 1 變到 -1 必經的數學過程），這一瞬間 flap 底邊
+      // 會往上縮、露出它和 body 之間的空隙。如果空隙底下是深色的頁面背景，
+      // 看起來就會像信封被硬生生裁成兩半——這正是你截圖看到的畫面。
+      // 加這片背板之後，不管哪個瞬間出現空隙，露出來的都會是同一張信封照片，
+      // 不會看到背景色，視覺上就不會再有「裁開」的感覺。
+      const backingEl = document.createElement('div');
+      backingEl.className = 'flip-env-backing';
+      document.body.appendChild(backingEl);
       document.body.appendChild(flapEl);
       document.body.appendChild(bodyEl);
 
@@ -875,6 +894,11 @@ function openHeartModal(idx, cardEl){
         bodyEl.style.top = (top + flapH) + 'px';
         bodyEl.style.width = width + 'px';
         bodyEl.style.height = bodyH + 'px';
+        backingEl.style.transition = tr;
+        backingEl.style.left = left + 'px';
+        backingEl.style.top = top + 'px';
+        backingEl.style.width = width + 'px';
+        backingEl.style.height = height + 'px';
       }
 
       const envStartW = startRect.width * 1.55;
@@ -972,8 +996,10 @@ function openHeartModal(idx, cardEl){
       setTimeout(()=>{
         flapEl.style.transition = `opacity .34s ease`;
         bodyEl.style.transition = `opacity .34s ease`;
+        backingEl.style.transition = `opacity .34s ease`;
         flapEl.style.opacity = '0';
         bodyEl.style.opacity = '0';
+        backingEl.style.opacity = '0';
       }, envFadeStart);
 
       // 階段六（與信封淡出小幅重疊，銜接更順）：信紙整張放大、移動到最終
@@ -1007,6 +1033,7 @@ function openHeartModal(idx, cardEl){
       setTimeout(()=>{
         flapEl.remove();
         bodyEl.remove();
+        backingEl.remove();
         letter.remove();
         backdrop.remove();
         overlay.style.transition = '';
