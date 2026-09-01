@@ -481,6 +481,25 @@
     font-size:11px;letter-spacing:1px;color:rgba(245,243,237,.55);
     font-family:'IBM Plex Mono',monospace;
   }
+  /* 影片預設靜音自動播放（手機瀏覽器規定），這顆按鈕讓使用者可以自己輕觸開聲音。
+     擺在右上角、跟左上角的關閉鍵對稱，且要蓋在 video 上層才點得到。 */
+  .open-video-mute{
+    position:absolute;
+    top:calc(20px + env(safe-area-inset-top,0px)); right:20px;
+    z-index:5;
+    width:40px; height:40px;
+    border-radius:50%;
+    border:1.5px solid rgba(245,243,237,0.5);
+    background:rgba(245,243,237,0.08);
+    color:var(--white);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+  }
+  .open-video-mute svg{width:19px;height:19px;display:block;}
+  .open-video-mute .icon-muted{display:block;}
+  .open-video-mute .icon-unmuted{display:none;}
+  .open-video-mute.is-unmuted .icon-muted{display:none;}
+  .open-video-mute.is-unmuted .icon-unmuted{display:block;}
 
   /* ---------- 開信封動畫（真實信封照片 → 信紙）----------
      信封圖檔本身的長寬比是 1536:1024（3:2）。信封蓋（flap）與信封本體（body）
@@ -855,6 +874,10 @@ function openHeartModal(idx, cardEl){
     videoOverlay.className = 'open-video-overlay';
     videoOverlay.innerHTML =
       '<video id="openLetterVideo" src="open-letter.mp4" muted playsinline preload="auto"></video>' +
+      '<button type="button" class="open-video-mute" id="openVideoMute" aria-label="開啟聲音">' +
+        '<svg class="icon-muted" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16 8l5 8M21 8l-5 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+        '<svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+      '</button>' +
       '<div class="open-video-skip">點擊畫面以跳過</div>';
     document.body.appendChild(videoOverlay);
 
@@ -865,6 +888,16 @@ function openHeartModal(idx, cardEl){
 
     const videoEl = videoOverlay.querySelector('#openLetterVideo');
     let finished = false;
+
+    // 輕觸開聲音：獨立按鈕、要擋掉事件冒泡，不然點下去會被 videoOverlay 的
+    // click（跳過動畫）一併接收到，變成「一點開聲音就順便跳過影片」。
+    const muteBtn = videoOverlay.querySelector('#openVideoMute');
+    muteBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      videoEl.muted = !videoEl.muted;
+      muteBtn.classList.toggle('is-unmuted', !videoEl.muted);
+      muteBtn.setAttribute('aria-label', videoEl.muted ? '開啟聲音' : '靜音');
+    });
 
     // 影片播完（或使用者點擊跳過、或載入/自動播放失敗）都會走到這裡，
     // 確保不管哪種情況，最後一定會接回信紙內容，不會卡住。
