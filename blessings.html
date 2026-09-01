@@ -468,7 +468,15 @@
     background:var(--ink);
     opacity:0;
   }
-  .open-video-overlay video{
+  /* 包住 video 本身的容器，尺寸完全貼合影片實際顯示大小（inline-block 自動縮到
+     內容尺寸）——按鈕、跳過提示都改成相對「這個容器」定位，不管影片是直式、
+     方形，或螢幕多大，都會確實貼在影片畫面自己的角落，而不是飄在很遠的螢幕邊緣。 */
+  .open-video-frame{
+    position:relative;
+    display:inline-block;
+    line-height:0;
+  }
+  .open-video-frame video{
     width:auto;height:auto;
     max-width:92vw;max-height:82vh;
     border-radius:10px;
@@ -476,17 +484,17 @@
     display:block;
   }
   .open-video-skip{
-    position:absolute;left:0;right:0;bottom:calc(20px + env(safe-area-inset-bottom,0px));
+    position:absolute;left:0;right:0;bottom:-32px;
     text-align:center;pointer-events:none;
     font-size:11px;letter-spacing:1px;color:rgba(245,243,237,.55);
     font-family:'IBM Plex Mono',monospace;
   }
   /* 影片預設靜音自動播放（手機瀏覽器規定），這顆按鈕讓使用者可以自己輕觸開聲音。
-     放在右下角、貼著「點擊畫面以跳過」提示旁邊——影片通常只有幾秒，
-     放在右上角使用者常常來不及注意到，放在視線本來就會停留的下方更容易被點到。 */
+     直接疊在影片畫面本身的右下角（像一般影片播放器的音量鍵那樣貼在畫面上），
+     不會因為影片沒有滿版螢幕而離按鈕很遠、不容易注意到。 */
   .open-video-mute{
     position:absolute;
-    bottom:calc(20px + env(safe-area-inset-bottom,0px)); right:20px;
+    bottom:12px; right:12px;
     z-index:5;
     width:44px; height:44px;
     border-radius:50%;
@@ -874,12 +882,14 @@ function openHeartModal(idx, cardEl){
     const videoOverlay = document.createElement('div');
     videoOverlay.className = 'open-video-overlay';
     videoOverlay.innerHTML =
-      '<video id="openLetterVideo" src="open-letter.mp4" muted playsinline preload="auto"></video>' +
-      '<button type="button" class="open-video-mute" id="openVideoMute" aria-label="開啟聲音">' +
-        '<svg class="icon-muted" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16 8l5 8M21 8l-5 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-        '<svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-      '</button>' +
-      '<div class="open-video-skip">點擊畫面以跳過</div>';
+      '<div class="open-video-frame">' +
+        '<video id="openLetterVideo" src="open-letter.mp4" muted playsinline preload="auto"></video>' +
+        '<button type="button" class="open-video-mute" id="openVideoMute" aria-label="開啟聲音">' +
+          '<svg class="icon-muted" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16 8l5 8M21 8l-5 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+          '<svg class="icon-unmuted" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L8 9H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+        '</button>' +
+        '<div class="open-video-skip">點擊畫面以跳過</div>' +
+      '</div>';
     document.body.appendChild(videoOverlay);
 
     requestAnimationFrame(()=>{
