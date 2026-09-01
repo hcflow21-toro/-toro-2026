@@ -210,6 +210,21 @@
   .submit-btn:hover{opacity:.9;}
   .submit-btn:disabled{opacity:.55;cursor:not-allowed;}
 
+  /* ---------- 留言截止後顯示的提示（表單關閉、留言牆仍可看） ---------- */
+  .bless-closed{
+    display:none;
+    text-align:center;
+    padding:28px 20px;
+    border:1.5px solid var(--paper-line);
+    border-radius:12px;
+    background:rgba(20,32,28,0.03);
+    margin-bottom:8px;
+  }
+  .bless-closed.show{display:block;}
+  .bless-closed .icon{font-size:22px;margin-bottom:8px;}
+  .bless-closed .title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+  .bless-closed .desc{font-size:13px;color:var(--ink-soft);line-height:1.6;}
+
   /* ---------- 祝福留言牆 ---------- */
   .wall{
     background:var(--paper);
@@ -658,25 +673,33 @@
     <h2>留下你的祝福</h2>
     <p class="sub">選一個顏色，寫下你的祝福，送出後大家都看得到。</p>
 
-    <div class="field">
-      <label>暱稱 <span class="opt">選填，不填會顯示「匿名粉絲」</span></label>
-      <input type="text" id="blessNickname" placeholder="你想署名的暱稱">
+    <div class="bless-closed" id="blessClosed">
+      <div class="icon">✉️</div>
+      <div class="title">留言時間已截止</div>
+      <div class="desc">感謝大家的祝福，留言蒐集已經結束，<br>不過還是可以繼續往下看大家留下的話 🎉</div>
     </div>
 
-    <div class="field">
-      <label>選一個顏色</label>
-      <div class="color-picker" id="colorPicker"></div>
+    <div id="blessComposer">
+      <div class="field">
+        <label>暱稱 <span class="opt">選填，不填會顯示「匿名粉絲」</span></label>
+        <input type="text" id="blessNickname" placeholder="你想署名的暱稱">
+      </div>
+
+      <div class="field">
+        <label>選一個顏色</label>
+        <div class="color-picker" id="colorPicker"></div>
+      </div>
+
+      <div class="field">
+        <label>祝福語 <span class="opt">必填</span></label>
+        <textarea id="blessingMsg" placeholder="寫下你想對TORO說的話"></textarea>
+        <div class="char-count"><span id="charCount">0</span> 字</div>
+      </div>
+
+      <div class="form-err" id="blessErr">請選擇一個顏色，並寫下祝福語再送出。</div>
+
+      <button type="button" class="submit-btn" id="blessBtn">送出祝福</button>
     </div>
-
-    <div class="field">
-      <label>祝福語 <span class="opt">必填</span></label>
-      <textarea id="blessingMsg" placeholder="寫下你想對TORO說的話"></textarea>
-      <div class="char-count"><span id="charCount">0</span> 字</div>
-    </div>
-
-    <div class="form-err" id="blessErr">請選擇一個顏色，並寫下祝福語再送出。</div>
-
-    <button type="button" class="submit-btn" id="blessBtn">送出祝福</button>
 
     <div class="wall-grid" id="wallGrid">
       <div class="wall-empty" id="wallEmpty">還沒有祝福，快來當第一個 🎉</div>
@@ -714,6 +737,23 @@ const CONFIG = {
   // 貼上跟主頁「一模一樣」的 Google Apps Script 網頁應用程式網址
   SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzBj83ZJDxhTDvvc27hTGIApSwECFD2mEwCPpCOrNH9OMASAt2FBgFjuu-X-Nn8CcVQ/exec"
 };
+
+// 留言截止時間：2026/10/2 23:59:59（台灣時間）。過了這個時間，表單自動關閉、
+// 換成「已截止」的提示，但留言牆本身（讀取、瀏覽、左右滑動看留言）完全不受影響。
+// 這裡明確寫死 +08:00 時區，不管訪客手機設定在哪個時區，判斷的都是台灣時間的
+// 2026/10/2 23:59:59，不會因為訪客身在國外而提早或延後關閉。
+const SUBMIT_DEADLINE = new Date('2026-10-02T23:59:59+08:00');
+
+function isSubmissionClosed(){
+  return Date.now() > SUBMIT_DEADLINE.getTime();
+}
+
+// 依照目前時間，切換「留言表單」跟「已截止」提示的顯示；頁面一載入就會跑一次。
+function updateSubmissionState(){
+  const closed = isSubmissionClosed();
+  document.getElementById('blessClosed').classList.toggle('show', closed);
+  document.getElementById('blessComposer').style.display = closed ? 'none' : '';
+}
 
 /* ====================== 祝福留言牆 ====================== */
 const BLESSING_COLORS = [
@@ -1001,6 +1041,13 @@ document.getElementById('heartModalOverlay').addEventListener('click', (e)=>{
 });
 
 document.getElementById('blessBtn').addEventListener('click', ()=>{
+  // 防呆：如果使用者在截止前就打開頁面、一直停留到截止之後才按送出，
+  // 這裡再檢查一次時間，不會讓「過期」的送出偷偷成功。
+  if(isSubmissionClosed()){
+    updateSubmissionState();
+    return;
+  }
+
   const nickname = document.getElementById('blessNickname').value.trim();
   const message = blessingMsgEl.value.trim();
   const errEl = document.getElementById('blessErr');
@@ -1061,6 +1108,7 @@ function loadBlessings(){
 }
 document.getElementById('wallRefresh').addEventListener('click', loadBlessings);
 loadBlessings();
+updateSubmissionState();
 
 </script>
 
