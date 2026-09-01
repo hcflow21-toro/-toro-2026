@@ -482,12 +482,13 @@
     font-family:'IBM Plex Mono',monospace;
   }
   /* 影片預設靜音自動播放（手機瀏覽器規定），這顆按鈕讓使用者可以自己輕觸開聲音。
-     擺在右上角、跟左上角的關閉鍵對稱，且要蓋在 video 上層才點得到。 */
+     放在右下角、貼著「點擊畫面以跳過」提示旁邊——影片通常只有幾秒，
+     放在右上角使用者常常來不及注意到，放在視線本來就會停留的下方更容易被點到。 */
   .open-video-mute{
     position:absolute;
-    top:calc(20px + env(safe-area-inset-top,0px)); right:20px;
+    bottom:calc(20px + env(safe-area-inset-bottom,0px)); right:20px;
     z-index:5;
-    width:40px; height:40px;
+    width:44px; height:44px;
     border-radius:50%;
     border:1.5px solid rgba(245,243,237,0.5);
     background:rgba(245,243,237,0.08);
@@ -495,7 +496,7 @@
     display:flex;align-items:center;justify-content:center;
     cursor:pointer;
   }
-  .open-video-mute svg{width:19px;height:19px;display:block;}
+  .open-video-mute svg{width:20px;height:20px;display:block;}
   .open-video-mute .icon-muted{display:block;}
   .open-video-mute .icon-unmuted{display:none;}
   .open-video-mute.is-unmuted .icon-muted{display:none;}
