@@ -368,9 +368,9 @@
   }
 
   .swipe-hint{
-    position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom,0px));
+    margin-top:14px;
     z-index:15;text-align:center;pointer-events:none;
-    font-size:11px;letter-spacing:1px;color:rgba(245,243,237,.55);
+    font-size:14px;letter-spacing:1px;color:rgba(245,243,237,.68);
     font-family:'IBM Plex Mono',monospace;
   }
   .heart-modal-overlay.show{display:flex;}
@@ -671,7 +671,7 @@
 
   <section class="wall">
     <h2>留下你的祝福</h2>
-    <p class="sub">選一個顏色，寫下你的祝福，送出後大家都看得到。點擊愛心可查看完整留言。</p>
+    <p class="sub">選一個顏色，寫下你的祝福，送出後大家都看得到。</p>
 
     <div class="bless-closed" id="blessClosed">
       <div class="icon">✉️</div>
@@ -713,7 +713,6 @@
  <div class="heart-modal-overlay" id="heartModalOverlay">
   <button type="button" class="heart-modal-close" id="heartModalClose">✕</button>
   <div class="heart-modal-counter" id="heartModalCounter">1 / 1</div>
-  <div class="swipe-hint">‹ 左右滑動看其他祝福 ›</div>
   <div class="heart-modal-content" id="heartModalContent">
     <div class="letter-wrap">
       <div class="letter-heart" id="letterHeart"><svg viewBox="0 0 32 29" xmlns="http://www.w3.org/2000/svg"><path d="M23.6 0c-3.4 0-6.3 2-7.6 4.9C14.7 2 11.8 0 8.4 0 3.8 0 0 3.8 0 8.4c0 9.4 9.5 13.9 16 20.6 6.5-6.7 16-11.2 16-20.6C32 3.8 28.2 0 23.6 0z"/></svg></div>
@@ -728,6 +727,7 @@
         </div>
         <div class="msg-from" id="heartModalFrom"></div>
       </div>
+      <div class="swipe-hint">‹ 左右滑動看其他祝福 ›</div>
     </div>
   </div>
 </div>
