@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>現場領取名單 - 2026 TORO慶生應援小物</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14201C;
+    --ink-soft:#2A3B33;
+    --paper:#FBF9F4;
+    --paper-line:#E7E1D2;
+    --gold:#E8A94B;
+    --teal:#3E8E7E;
+    --white:#F5F3ED;
+    --danger:#C1543C;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--white);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:24px 20px 64px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    border:1px solid rgba(232,169,75,0.5);
+    padding:6px 10px;
+    border-radius:999px;
+    display:inline-block;
+    margin-bottom:14px;
+  }
+  h1{
+    font-family:'Big Shoulders Display',sans-serif;
+    font-weight:800;
+    font-size:clamp(26px,7vw,34px);
+    line-height:1.05;
+    margin:0 0 20px;
+    text-transform:uppercase;
+  }
+  .card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:var(--radius);
+    padding:22px 20px;
+    margin-bottom:18px;
+  }
+  .field label{
+    display:block;
+    font-weight:600;
+    font-size:13px;
+    margin-bottom:6px;
+  }
+  .field input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid var(--paper-line);
+    background:#fff;
+    font-size:15px;
+    margin-bottom:12px;
+  }
+  .btn{
+    padding:12px 18px;
+    border-radius:10px;
+    border:none;
+    background:var(--teal);
+    color:#fff;
+    font-weight:700;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .btn.gold{background:var(--gold);color:var(--ink);}
+  .btn.small{padding:6px 12px;font-size:12px;}
+  .session-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;}
+  .session-tab{
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(245,243,237,0.3);
+    font-size:12px;
+    font-family:'IBM Plex Mono',monospace;
+    cursor:pointer;
+    color:var(--white);
+  }
+  .session-tab.active{background:var(--teal);border-color:var(--teal);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--paper-line);}
+  th{font-size:11px;text-transform:uppercase;color:var(--ink-soft);}
+  .badge{
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+  }
+  .badge.done{background:var(--teal);color:#fff;}
+  .badge.pending{background:var(--paper-line);color:var(--ink-soft);}
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .toolbar input{flex:1;min-width:160px;padding:10px 12px;border-radius:10px;border:1px solid var(--paper-line);}
+  .count-line{font-size:12px;color:var(--ink-soft);margin-bottom:8px;}
+  .hidden{display:none;}
+  .msg{font-size:13px;color:var(--danger);margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">現場工作人員</div>
+  <h1>領取名單查詢</h1>
+
+  <div id="gate" class="card">
+    <div class="field">
+      <label>通行碼</label>
+      <input type="password" id="keyInput" placeholder="請輸入工作人員通行碼">
+    </div>
+    <button class="btn" id="enterBtn">進入</button>
+    <div class="msg hidden" id="gateError">通行碼錯誤，請重新輸入。</div>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="session-tabs" id="sessionTabs"></div>
+
+    <div class="card">
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="搜尋姓名或電話">
+        <button class="btn small" id="refreshBtn">重新整理</button>
+      </div>
+      <div class="count-line" id="countLine"></div>
+      <table>
+        <thead>
+          <tr><th>姓名</th><th>暱稱</th><th>電話</th><th>狀態</th><th>領取時間</th><th></th></tr>
+        </thead>
+        <tbody id="listBody"></tbody>
+      </table>
+      <div class="msg hidden" id="listError"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzBj83ZJDxhTDvvc27hTGIApSwECFD2mEwCPpCOrNH9OMASAt2FBgFjuu-X-Nn8CcVQ/exec"
+};
+
+const SESSIONS = [
+  { date: "9/26 16:00-18:00", locations: ["高雄珊瑚廣場"] },
+  { date: "9/27 15:00-16:00", locations: ["高雄珊瑚廣場"] },
+  { date: "9/28 16:00-18:00", locations: ["台北西門捷運地下街", "台中新時代星巴克"] },
+  { date: "10/1 19:00-21:00", locations: ["彰化全家新再安店"] },
+  { date: "10/2 19:00-21:00", locations: ["台北中山地下街", "台中新時代星巴克", "高雄大遠百星巴克"] }
+];
+
+function jsonp(url){
+  return new Promise((resolve)=>{
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const timeout = setTimeout(()=>{ cleanup(); resolve(null); }, 8000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data){ cleanup(); resolve(data); };
+    const script = document.createElement('script');
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = ()=>{ cleanup(); resolve(null); };
+    document.body.appendChild(script);
+  });
+}
+
+let staffKey = sessionStorage.getItem('staffKey') || '';
+let currentSession = null; // {date, location}
+let pollTimer = null;
+let fullList = [];
+
+document.getElementById('enterBtn').addEventListener('click', async ()=>{
+  const key = document.getElementById('keyInput').value.trim();
+  if (!key) return;
+  staffKey = key;
+  const ok = await trySessionList();
+  if (ok) {
+    sessionStorage.setItem('staffKey', key);
+    document.getElementById('gate').classList.add('hidden');
+    document.getElementById('panel').classList.remove('hidden');
+    initPanel();
+  } else {
+    document.getElementById('gateError').classList.remove('hidden');
+  }
+});
+
+// quick auth check using the first session as a probe
+async function trySessionList(){
+  const g = SESSIONS[0];
+  const url = CONFIG.SCRIPT_URL + '?action=sessionList'
+    + '&d=' + encodeURIComponent(g.date)
+    + '&l=' + encodeURIComponent(g.locations[0])
+    + '&key=' + encodeURIComponent(staffKey);
+  const data = await jsonp(url);
+  return data && !data.error;
+}
+
+function initPanel(){
+  const tabsEl = document.getElementById('sessionTabs');
+  tabsEl.innerHTML = '';
+  SESSIONS.forEach(g=>{
+    g.locations.forEach(loc=>{
+      const tab = document.createElement('div');
+      tab.className = 'session-tab';
+      tab.textContent = g.date + ' ' + loc;
+      tab.addEventListener('click', ()=>{
+        [...tabsEl.children].forEach(t=>t.classList.remove('active'));
+        tab.classList.add('active');
+        selectSession(g.date, loc);
+      });
+      tabsEl.appendChild(tab);
+    });
+  });
+  // auto-select first
+  if (tabsEl.firstChild) tabsEl.firstChild.click();
+}
+
+function selectSession(date, loc){
+  currentSession = { date, location: loc };
+  loadList();
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(loadList, 15000);
+}
+
+async function loadList(){
+  if (!currentSession) return;
+  const listError = document.getElementById('listError');
+  listError.classList.add('hidden');
+  const url = CONFIG.SCRIPT_URL + '?action=sessionList'
+    + '&d=' + encodeURIComponent(currentSession.date)
+    + '&l=' + encodeURIComponent(currentSession.location)
+    + '&key=' + encodeURIComponent(staffKey);
+  const data = await jsonp(url);
+  if (!data || data.error) {
+    listError.textContent = '讀取名單失敗，請重新整理或重新輸入通行碼。';
+    listError.classList.remove('hidden');
+    return;
+  }
+  fullList = data.list || [];
+  renderList();
+}
+
+function renderList(){
+  const q = document.getElementById('searchInput').value.trim();
+  const filtered = q
+    ? fullList.filter(r => (r.name && r.name.includes(q)) || (r.phone && String(r.phone).includes(q)))
+    : fullList;
+
+  const doneCount = fullList.filter(r => r.status === '已領取').length;
+  document.getElementById('countLine').textContent =
+    '共 ' + fullList.length + ' 人，已領取 ' + doneCount + ' 人';
+
+  const tbody = document.getElementById('listBody');
+  tbody.innerHTML = '';
+  filtered.forEach(r=>{
+    const tr = document.createElement('tr');
+    const isDone = r.status === '已領取';
+    tr.innerHTML =
+      '<td>' + escapeHtml(r.name) + '</td>' +
+      '<td>' + escapeHtml(r.nickname || '') + '</td>' +
+      '<td>' + escapeHtml(r.phone) + '</td>' +
+      '<td><span class="badge ' + (isDone ? 'done' : 'pending') + '">' + (isDone ? '已領取' : '未領取') + '</span></td>' +
+      '<td>' + escapeHtml(r.checkedTime || '') + '</td>' +
+      '<td></td>';
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'btn small' + (isDone ? '' : ' gold');
+    toggleBtn.textContent = isDone ? '改為未領取' : '標記已領取';
+    toggleBtn.addEventListener('click', ()=> toggleStatus(r, isDone ? '未領取' : '已領取'));
+    tr.lastElementChild.appendChild(toggleBtn);
+    tbody.appendChild(tr);
+  });
+}
+
+async function toggleStatus(row, newStatus){
+  const url = CONFIG.SCRIPT_URL + '?action=toggleStatus'
+    + '&d=' + encodeURIComponent(currentSession.date)
+    + '&l=' + encodeURIComponent(currentSession.location)
+    + '&name=' + encodeURIComponent(row.name)
+    + '&phone=' + encodeURIComponent(row.phone)
+    + '&status=' + encodeURIComponent(newStatus)
+    + '&key=' + encodeURIComponent(staffKey);
+  const data = await jsonp(url);
+  if (data && data.success) {
+    loadList();
+  } else {
+    alert('更新失敗，請重試。');
+  }
+}
+
+function escapeHtml(str){
+  return String(str == null ? '' : str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.getElementById('searchInput').addEventListener('input', renderList);
+document.getElementById('refreshBtn').addEventListener('click', loadList);
+
+// auto-login if key already stored
+(async function(){
+  if (staffKey) {
+    const ok = await trySessionList();
+    if (ok) {
+      document.getElementById('gate').classList.add('hidden');
+      document.getElementById('panel').classList.remove('hidden');
+      initPanel();
+    } else {
+      sessionStorage.removeItem('staffKey');
+    }
+  }
+})();
+</script>
+</body>
+</html>
