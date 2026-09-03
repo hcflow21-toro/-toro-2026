@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 TORO慶生應援小物領取確認</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14201C;
+    --ink-soft:#2A3B33;
+    --paper:#FBF9F4;
+    --paper-line:#E7E1D2;
+    --gold:#E8A94B;
+    --teal:#3E8E7E;
+    --white:#F5F3ED;
+    --danger:#C1543C;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--white);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:24px 20px 64px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    border:1px solid rgba(232,169,75,0.5);
+    padding:6px 10px;
+    border-radius:999px;
+    display:inline-block;
+    margin-bottom:14px;
+  }
+  h1{
+    font-family:'Big Shoulders Display',sans-serif;
+    font-weight:800;
+    font-size:clamp(28px,8vw,38px);
+    line-height:1.05;
+    letter-spacing:-0.01em;
+    margin:0 0 8px;
+    text-transform:uppercase;
+  }
+  .session-badge{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:22px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    line-height:1.6;
+  }
+  .session-badge b{color:var(--teal);}
+  .card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:var(--radius);
+    padding:24px 20px;
+  }
+  .field{margin-bottom:18px;}
+  .field label{
+    display:block;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    margin-bottom:6px;
+  }
+  .field input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid var(--paper-line);
+    background:#fff;
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+  }
+  .btn{
+    width:100%;
+    padding:14px 16px;
+    border-radius:10px;
+    border:none;
+    background:var(--teal);
+    color:#fff;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .btn:disabled{opacity:.5;}
+  .btn.gold{background:var(--gold);color:var(--ink);}
+  .btn.staff{background:var(--ink);color:var(--white);margin-top:8px;}
+  .msg{
+    font-size:13px;
+    line-height:1.6;
+    margin-top:10px;
+  }
+  .msg.error{color:var(--danger);}
+  .result-box{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:var(--radius);
+    padding:26px 20px;
+    text-align:center;
+  }
+  .result-box h2{
+    font-family:'Big Shoulders Display',sans-serif;
+    font-size:28px;
+    text-transform:uppercase;
+    margin:0 0 10px;
+  }
+  .result-box .kv{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    line-height:1.8;
+    text-align:left;
+    background:var(--white);
+    border-radius:10px;
+    padding:14px 16px;
+    margin:16px 0;
+  }
+  .divider{
+    margin:28px 0 18px;
+    padding-top:18px;
+    border-top:2px dashed var(--paper-line);
+  }
+  .staff-note{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-bottom:12px;
+  }
+  .hidden{display:none;}
+  #loading{text-align:center;padding:40px 0;color:rgba(245,243,237,0.7);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">現場領取確認</div>
+  <h1>應援小物領取</h1>
+  <div id="loading">載入中…</div>
+  <div id="invalidSession" class="card hidden">
+    <p>此連結無效或已過期，請洽工作人員確認場次連結。</p>
+  </div>
+
+  <div id="main" class="hidden">
+    <div class="session-badge" id="sessionBadge"></div>
+
+    <div id="stepForm" class="card">
+      <div class="field">
+        <label>姓名（本名）</label>
+        <input type="text" id="nameInput" placeholder="請輸入登記時填寫的本名">
+      </div>
+      <div class="field">
+        <label>電話</label>
+        <input type="tel" id="phoneInput" placeholder="09xxxxxxxx" inputmode="numeric">
+      </div>
+      <button class="btn" id="lookupBtn">查詢領取資格</button>
+      <div class="msg error hidden" id="lookupError"></div>
+    </div>
+
+    <div id="stepConfirm1" class="result-box hidden">
+      <h2>核對成功</h2>
+      <div class="kv" id="confirm1Info"></div>
+      <button class="btn gold" id="confirmBtn1">領取確認</button>
+    </div>
+
+    <div id="stepConfirm2" class="result-box hidden">
+      <h2>應援物已領取</h2>
+      <div class="kv" id="confirm2Info"></div>
+      <p style="font-size:13px;color:var(--ink-soft);">請將此畫面出示給工作人員核對日期與場次，並交付應援物。</p>
+      <div class="divider">
+        <div class="staff-note">以下由工作人員操作</div>
+        <button class="btn staff" id="confirmBtn2">工作人員核對後，請按此完成領取</button>
+      </div>
+    </div>
+
+    <div id="stepDone" class="result-box hidden">
+      <h2>謝謝參與</h2>
+      <p>應援物已完成領取登記。</p>
+    </div>
+
+    <div id="stepAlready" class="result-box hidden">
+      <h2>此筆資料已領取</h2>
+      <div class="kv" id="alreadyInfo"></div>
+      <p style="font-size:13px;color:var(--ink-soft);">如有疑問請洽工作人員。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const CONFIG = {
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzBj83ZJDxhTDvvc27hTGIApSwECFD2mEwCPpCOrNH9OMASAt2FBgFjuu-X-Nn8CcVQ/exec"
+};
+
+const SESSIONS = [
+  { date: "9/26 16:00-18:00", locations: ["高雄珊瑚廣場"] },
+  { date: "9/27 15:00-16:00", locations: ["高雄珊瑚廣場"] },
+  { date: "9/28 16:00-18:00", locations: ["台北西門捷運地下街", "台中新時代星巴克"] },
+  { date: "10/1 19:00-21:00", locations: ["彰化全家新再安店"] },
+  { date: "10/2 19:00-21:00", locations: ["台北中山地下街", "台中新時代星巴克", "高雄大遠百星巴克"] }
+];
+
+function jsonp(url){
+  return new Promise((resolve)=>{
+    const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const timeout = setTimeout(()=>{ cleanup(); resolve(null); }, 8000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data){ cleanup(); resolve(data); };
+    const script = document.createElement('script');
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + cbName;
+    script.onerror = ()=>{ cleanup(); resolve(null); };
+    document.body.appendChild(script);
+  });
+}
+
+const params = new URLSearchParams(location.search);
+const sessionDate = params.get('d') || '';
+const sessionLoc = params.get('l') || '';
+
+function sessionValid(){
+  return SESSIONS.some(g => g.date === sessionDate && g.locations.includes(sessionLoc));
+}
+
+document.getElementById('loading').style.display = 'none';
+if (!sessionDate || !sessionLoc || !sessionValid()) {
+  document.getElementById('invalidSession').classList.remove('hidden');
+} else {
+  document.getElementById('main').classList.remove('hidden');
+  document.getElementById('sessionBadge').innerHTML =
+    '場次　<b>' + sessionDate + '</b><br>地點　<b>' + sessionLoc + '</b>';
+}
+
+function showStep(id){
+  ['stepForm','stepConfirm1','stepConfirm2','stepDone','stepAlready'].forEach(s=>{
+    document.getElementById(s).classList.add('hidden');
+  });
+  document.getElementById(id).classList.remove('hidden');
+}
+
+let currentName = '', currentPhone = '';
+
+document.getElementById('lookupBtn').addEventListener('click', async ()=>{
+  const name = document.getElementById('nameInput').value.trim();
+  const phone = document.getElementById('phoneInput').value.trim();
+  const errEl = document.getElementById('lookupError');
+  errEl.classList.add('hidden');
+
+  if (!name || !phone) {
+    errEl.textContent = '請填寫姓名與電話。';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('lookupBtn');
+  btn.disabled = true;
+  btn.textContent = '查詢中…';
+
+  const url = CONFIG.SCRIPT_URL + '?action=lookup'
+    + '&name=' + encodeURIComponent(name)
+    + '&phone=' + encodeURIComponent(phone)
+    + '&d=' + encodeURIComponent(sessionDate)
+    + '&l=' + encodeURIComponent(sessionLoc);
+
+  const data = await jsonp(url);
+  btn.disabled = false;
+  btn.textContent = '查詢領取資格';
+
+  if (!data) {
+    errEl.textContent = '查詢失敗，請檢查網路連線後重試。';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (!data.found) {
+    errEl.textContent = '查無登記資料，請確認姓名電話是否與登記時相同，或洽工作人員。';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  currentName = name;
+  currentPhone = phone;
+
+  if (data.alreadyChecked) {
+    document.getElementById('alreadyInfo').innerHTML =
+      '姓名　' + name + '<br>場次　' + sessionDate + '　' + sessionLoc +
+      (data.checkedTime ? ('<br>領取時間　' + data.checkedTime) : '');
+    showStep('stepAlready');
+    return;
+  }
+
+  document.getElementById('confirm1Info').innerHTML =
+    '姓名　' + name + (data.nickname ? ('<br>暱稱　' + data.nickname) : '') +
+    '<br>場次　' + sessionDate + '<br>地點　' + sessionLoc;
+  showStep('stepConfirm1');
+});
+
+document.getElementById('confirmBtn1').addEventListener('click', ()=>{
+  document.getElementById('confirm2Info').innerHTML =
+    '姓名　' + currentName + '<br>場次　' + sessionDate + '<br>地點　' + sessionLoc;
+  showStep('stepConfirm2');
+});
+
+document.getElementById('confirmBtn2').addEventListener('click', async ()=>{
+  const btn = document.getElementById('confirmBtn2');
+  btn.disabled = true;
+  btn.textContent = '處理中…';
+
+  const url = CONFIG.SCRIPT_URL + '?action=confirmPickup'
+    + '&name=' + encodeURIComponent(currentName)
+    + '&phone=' + encodeURIComponent(currentPhone)
+    + '&d=' + encodeURIComponent(sessionDate)
+    + '&l=' + encodeURIComponent(sessionLoc);
+
+  const data = await jsonp(url);
+  btn.disabled = false;
+  btn.textContent = '工作人員核對後，請按此完成領取';
+
+  if (data && data.success) {
+    showStep('stepDone');
+  } else if (data && data.alreadyChecked) {
+    document.getElementById('alreadyInfo').innerHTML =
+      '姓名　' + currentName + '<br>場次　' + sessionDate + '　' + sessionLoc +
+      (data.checkedTime ? ('<br>領取時間　' + data.checkedTime) : '');
+    showStep('stepAlready');
+  } else {
+    alert('處理失敗，請重試或洽系統管理員。');
+  }
+});
+</script>
+</body>
+</html>
