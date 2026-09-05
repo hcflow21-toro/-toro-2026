@@ -275,11 +275,13 @@ function renderList(){
       '<td><span class="badge ' + (isDone ? 'done' : 'pending') + '">' + (isDone ? '已領取' : '未領取') + '</span></td>' +
       '<td>' + escapeHtml(r.checkedTime || '') + '</td>' +
       '<td></td>';
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'btn small' + (isDone ? '' : ' gold');
-    toggleBtn.textContent = isDone ? '改為未領取' : '標記已領取';
-    toggleBtn.addEventListener('click', ()=> toggleStatus(r, isDone ? '未領取' : '已領取'));
-    tr.lastElementChild.appendChild(toggleBtn);
+    if (!isDone) {
+      const toggleBtn = document.createElement('button');
+      toggleBtn.className = 'btn small gold';
+      toggleBtn.textContent = '標記已領取';
+      toggleBtn.addEventListener('click', ()=> toggleStatus(r, '已領取'));
+      tr.lastElementChild.appendChild(toggleBtn);
+    }
     tbody.appendChild(tr);
   });
 }
