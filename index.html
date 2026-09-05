@@ -542,7 +542,8 @@ function validate(){
   let ok = true;
   setFieldError('name', !name); if(!name) ok=false;
   setFieldError('nickname', !nickname); if(!nickname) ok=false;
-  const phoneOk = /^\d{10}$/.test(phone);
+  const phoneOk = /^\d{10}$/.test(phone) && !phoneDuplicate;
+  phoneErrMsgEl.textContent = phoneDuplicate ? '此號碼已登記過' : phoneDefaultErrMsg;
   setFieldError('phone', !phoneOk); if(!phoneOk) ok=false;
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   setFieldError('email', !emailOk); if(!emailOk) ok=false;
@@ -550,19 +551,76 @@ function validate(){
   document.getElementById('formErr').classList.toggle('show', !ok);
   return ok;
 }
+const phoneErrMsgEl = document.querySelector('[data-field="phone"] .err-msg');
+const phoneDefaultErrMsg = phoneErrMsgEl.textContent;
+let phoneDuplicate = false;
+
+function checkPhoneDuplicate(phone){
+  return new Promise((resolve)=>{
+    const cbName = 'rcPhoneCb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
+    const timeout = setTimeout(()=>{
+      // 逾時就當作沒有重複，避免因網路問題把報名卡死
+      cleanup();
+      resolve({ exists: false, timedOut: true });
+    }, 6000);
+    function cleanup(){
+      clearTimeout(timeout);
+      delete window[cbName];
+      if(script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function(data){
+      cleanup();
+      resolve(data);
+    };
+    const script = document.createElement('script');
+    script.src = CONFIG.SCRIPT_URL + '?action=checkPhone&phone=' + encodeURIComponent(phone) + '&callback=' + cbName;
+    script.onerror = ()=>{ cleanup(); resolve({ exists: false, timedOut: true }); };
+    document.body.appendChild(script);
+  });
+}
+
+async function verifyPhoneField(){
+  const phone = document.getElementById('phone').value.trim();
+  if(!/^\d{10}$/.test(phone)) return;
+  const result = await checkPhoneDuplicate(phone);
+  // 若欄位內容在等待回應期間已被改掉，結果就不算數了
+  if(document.getElementById('phone').value.trim() !== phone) return;
+  if(result && result.exists){
+    phoneDuplicate = true;
+    phoneErrMsgEl.textContent = '此號碼已登記過';
+    setFieldError('phone', true);
+  }
+}
+
+document.getElementById('phone').addEventListener('blur', verifyPhoneField);
 document.getElementById('phone').addEventListener('input', (e)=>{
   e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+  phoneDuplicate = false;
+  phoneErrMsgEl.textContent = phoneDefaultErrMsg;
+  clearFieldError('phone');
 });
 document.getElementById('pickupForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   if(!validate()) return;
   const btn = document.getElementById('submitBtn');
   btn.disabled = true;
+  btn.textContent = '確認中…';
+  const phone = document.getElementById('phone').value.trim();
+  const dupCheck = await checkPhoneDuplicate(phone);
+  if(dupCheck && dupCheck.exists){
+    phoneDuplicate = true;
+    phoneErrMsgEl.textContent = '此號碼已登記過';
+    setFieldError('phone', true);
+    document.getElementById('formErr').classList.add('show');
+    btn.disabled = false;
+    btn.textContent = '完成登記';
+    return;
+  }
   btn.textContent = '送出中…';
   const payload = {
     name: document.getElementById('name').value.trim(),
     nickname: document.getElementById('nickname').value.trim(),
-    phone: document.getElementById('phone').value.trim(),
+    phone: phone,
     email: document.getElementById('email').value.trim(),
     date: `${state.date} ${state.time}`,
     location: state.location
