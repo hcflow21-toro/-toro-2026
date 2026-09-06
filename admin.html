@@ -95,6 +95,9 @@
     color:var(--white);
   }
   .session-tab.active{background:var(--teal);border-color:var(--teal);}
+  .session-tab.all-tab{border-color:rgba(232,169,75,0.6);font-weight:700;}
+  .session-tab.all-tab.active{background:var(--gold);border-color:var(--gold);color:var(--ink);}
+  .tab-divider{width:1px;align-self:stretch;background:rgba(245,243,237,0.25);margin:0 2px;}
   .qr-box{text-align:center;margin-bottom:16px;}
   .qr-box .qr-link{
     font-family:'IBM Plex Mono',monospace;
@@ -159,7 +162,7 @@
       <div class="count-line" id="countLine"></div>
       <table>
         <thead>
-          <tr><th>姓名</th><th>暱稱</th><th>電話</th><th>狀態</th><th>領取時間</th><th></th></tr>
+          <tr><th>姓名</th><th>暱稱</th><th>電話</th><th>場次</th><th>狀態</th><th>領取時間</th><th></th></tr>
         </thead>
         <tbody id="listBody"></tbody>
       </table>
@@ -202,6 +205,13 @@ let staffKey = sessionStorage.getItem('staffKey') || '';
 let currentSession = null; // {date, location}
 let pollTimer = null;
 let fullList = [];
+let isAllView = false;
+
+// Flatten SESSIONS into individual {date, location} combos
+const ALL_COMBOS = [];
+SESSIONS.forEach(g=>{
+  g.locations.forEach(loc=> ALL_COMBOS.push({ date: g.date, location: loc }));
+});
 
 document.getElementById('enterBtn').addEventListener('click', async ()=>{
   const key = document.getElementById('keyInput').value.trim();
@@ -235,6 +245,21 @@ function initPanel(){
 
   const tabsEl = document.getElementById('sessionTabs');
   tabsEl.innerHTML = '';
+
+  const allTab = document.createElement('div');
+  allTab.className = 'session-tab all-tab';
+  allTab.textContent = '全部場次（總覽）';
+  allTab.addEventListener('click', ()=>{
+    [...tabsEl.children].forEach(t=>t.classList.remove('active'));
+    allTab.classList.add('active');
+    selectAllSessions();
+  });
+  tabsEl.appendChild(allTab);
+
+  const divider = document.createElement('div');
+  divider.className = 'tab-divider';
+  tabsEl.appendChild(divider);
+
   SESSIONS.forEach(g=>{
     g.locations.forEach(loc=>{
       const tab = document.createElement('div');
@@ -248,8 +273,8 @@ function initPanel(){
       tabsEl.appendChild(tab);
     });
   });
-  // auto-select first
-  if (tabsEl.firstChild) tabsEl.firstChild.click();
+  // auto-select the all-sessions overview by default
+  allTab.click();
 }
 
 document.getElementById('saveBaseUrlBtn').addEventListener('click', ()=>{
@@ -259,7 +284,17 @@ document.getElementById('saveBaseUrlBtn').addEventListener('click', ()=>{
 });
 
 function selectSession(date, loc){
+  isAllView = false;
   currentSession = { date, location: loc };
+  renderQR();
+  loadList();
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(loadList, 15000);
+}
+
+function selectAllSessions(){
+  isAllView = true;
+  currentSession = null;
   renderQR();
   loadList();
   if (pollTimer) clearInterval(pollTimer);
@@ -269,6 +304,10 @@ function selectSession(date, loc){
 function renderQR(){
   const qrBox = document.getElementById('qrBox');
   qrBox.innerHTML = '';
+  if (isAllView) {
+    qrBox.innerHTML = '<p style="font-size:13px;color:var(--ink-soft);">總覽模式顯示所有場次的合併名單，請切換至個別場次頁籤以取得該場次的 QR Code。</p>';
+    return;
+  }
   if (!currentSession) return;
   const baseUrl = localStorage.getItem('rc_baseUrl') || '';
   if (!baseUrl) {
@@ -285,21 +324,42 @@ function renderQR(){
   qrBox.appendChild(linkText);
 }
 
-async function loadList(){
-  if (!currentSession) return;
-  const listError = document.getElementById('listError');
-  listError.classList.add('hidden');
+// Fetch one session's list and tag each row with its own date/location,
+// so a row can always be identified and updated regardless of which view it's shown in.
+async function fetchSessionList(date, loc){
   const url = CONFIG.SCRIPT_URL + '?action=sessionList'
-    + '&d=' + encodeURIComponent(currentSession.date)
-    + '&l=' + encodeURIComponent(currentSession.location)
+    + '&d=' + encodeURIComponent(date)
+    + '&l=' + encodeURIComponent(loc)
     + '&key=' + encodeURIComponent(staffKey);
   const data = await jsonp(url);
-  if (!data || data.error) {
+  if (!data || data.error) return null;
+  return (data.list || []).map(r => Object.assign({}, r, { sessionDate: date, sessionLoc: loc }));
+}
+
+async function loadList(){
+  const listError = document.getElementById('listError');
+  listError.classList.add('hidden');
+
+  if (isAllView) {
+    const results = await Promise.all(ALL_COMBOS.map(c => fetchSessionList(c.date, c.location)));
+    const failed = results.some(r => r === null);
+    if (failed) {
+      listError.textContent = '部分場次讀取失敗，名單可能不完整，請重新整理或重新輸入通行碼。';
+      listError.classList.remove('hidden');
+    }
+    fullList = results.filter(r => r !== null).flat();
+    renderList();
+    return;
+  }
+
+  if (!currentSession) return;
+  const list = await fetchSessionList(currentSession.date, currentSession.location);
+  if (list === null) {
     listError.textContent = '讀取名單失敗，請重新整理或重新輸入通行碼。';
     listError.classList.remove('hidden');
     return;
   }
-  fullList = data.list || [];
+  fullList = list;
   renderList();
 }
 
@@ -310,8 +370,9 @@ function renderList(){
     : fullList;
 
   const doneCount = fullList.filter(r => r.status === '已領取').length;
-  document.getElementById('countLine').textContent =
-    '共 ' + fullList.length + ' 人，已領取 ' + doneCount + ' 人';
+  document.getElementById('countLine').textContent = isAllView
+    ? '【全部場次】共 ' + fullList.length + ' 人，已領取 ' + doneCount + ' 人'
+    : '共 ' + fullList.length + ' 人，已領取 ' + doneCount + ' 人';
 
   const tbody = document.getElementById('listBody');
   tbody.innerHTML = '';
@@ -322,6 +383,7 @@ function renderList(){
       '<td>' + escapeHtml(r.name) + '</td>' +
       '<td>' + escapeHtml(r.nickname || '') + '</td>' +
       '<td>' + escapeHtml(r.phone) + '</td>' +
+      '<td>' + escapeHtml(r.sessionDate) + '<br>' + escapeHtml(r.sessionLoc) + '</td>' +
       '<td><span class="badge ' + (isDone ? 'done' : 'pending') + '">' + (isDone ? '已領取' : '未領取') + '</span></td>' +
       '<td>' + escapeHtml(r.checkedTime || '') + '</td>' +
       '<td></td>';
@@ -336,8 +398,8 @@ function renderList(){
 
 async function toggleStatus(row, newStatus){
   const url = CONFIG.SCRIPT_URL + '?action=toggleStatus'
-    + '&d=' + encodeURIComponent(currentSession.date)
-    + '&l=' + encodeURIComponent(currentSession.location)
+    + '&d=' + encodeURIComponent(row.sessionDate)
+    + '&l=' + encodeURIComponent(row.sessionLoc)
     + '&name=' + encodeURIComponent(row.name)
     + '&phone=' + encodeURIComponent(row.phone)
     + '&status=' + encodeURIComponent(newStatus)
