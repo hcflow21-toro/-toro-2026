@@ -145,6 +145,20 @@
   }
   .hidden{display:none;}
   #loading{text-align:center;padding:40px 0;color:rgba(245,243,237,0.7);}
+  .sponsor-badge{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--gold);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:14px;
+    border-radius:10px;
+    padding:10px 14px;
+    margin:14px 0;
+  }
+  .sponsor-badge .icon{font-size:18px;}
 </style>
 </head>
 <body>
@@ -175,12 +189,14 @@
     <div id="stepConfirm1" class="result-box hidden">
       <h2>核對成功</h2>
       <div class="kv" id="confirm1Info"></div>
+      <div class="sponsor-badge hidden" id="confirm1Sponsor"><span class="icon">🎁</span><span>認購贊助感謝禮</span></div>
       <button class="btn gold" id="confirmBtn1">領取確認</button>
     </div>
 
     <div id="stepConfirm2" class="result-box hidden">
       <h2>應援物已領取</h2>
       <div class="kv" id="confirm2Info"></div>
+      <div class="sponsor-badge hidden" id="confirm2Sponsor"><span class="icon">🎁</span><span>認購贊助感謝禮</span></div>
       <p style="font-size:13px;color:var(--ink-soft);">請將此畫面出示給工作人員核對日期與場次，並交付應援物。</p>
       <div class="scroll-spacer" aria-hidden="true"></div>
       <div class="divider">
@@ -197,6 +213,7 @@
     <div id="stepAlready" class="result-box hidden">
       <h2>此筆資料已領取</h2>
       <div class="kv" id="alreadyInfo"></div>
+      <div class="sponsor-badge hidden" id="alreadySponsor"><span class="icon">🎁</span><span>認購贊助感謝禮</span></div>
       <p style="font-size:13px;color:var(--ink-soft);">如有疑問請洽工作人員。</p>
     </div>
   </div>
@@ -256,7 +273,12 @@ function showStep(id){
   document.getElementById(id).classList.remove('hidden');
 }
 
-let currentName = '', currentPhone = '';
+let currentName = '', currentPhone = '', currentSponsor = false;
+
+function setSponsorBadge(elId, isSponsor){
+  const el = document.getElementById(elId);
+  el.classList.toggle('hidden', !isSponsor);
+}
 
 document.getElementById('lookupBtn').addEventListener('click', async ()=>{
   const name = document.getElementById('nameInput').value.trim();
@@ -298,10 +320,13 @@ document.getElementById('lookupBtn').addEventListener('click', async ()=>{
   currentName = name;
   currentPhone = phone;
 
+  currentSponsor = !!data.sponsor;
+
   if (data.alreadyChecked) {
     document.getElementById('alreadyInfo').innerHTML =
       '姓名　' + name + '<br>場次　' + sessionDate + '　' + sessionLoc +
       (data.checkedTime ? ('<br>領取時間　' + data.checkedTime) : '');
+    setSponsorBadge('alreadySponsor', currentSponsor);
     showStep('stepAlready');
     return;
   }
@@ -309,12 +334,14 @@ document.getElementById('lookupBtn').addEventListener('click', async ()=>{
   document.getElementById('confirm1Info').innerHTML =
     '姓名　' + name + (data.nickname ? ('<br>暱稱　' + data.nickname) : '') +
     '<br>場次　' + sessionDate + '<br>地點　' + sessionLoc;
+  setSponsorBadge('confirm1Sponsor', currentSponsor);
   showStep('stepConfirm1');
 });
 
 document.getElementById('confirmBtn1').addEventListener('click', ()=>{
   document.getElementById('confirm2Info').innerHTML =
     '姓名　' + currentName + '<br>場次　' + sessionDate + '<br>地點　' + sessionLoc;
+  setSponsorBadge('confirm2Sponsor', currentSponsor);
   showStep('stepConfirm2');
 });
 
@@ -339,6 +366,7 @@ document.getElementById('confirmBtn2').addEventListener('click', async ()=>{
     document.getElementById('alreadyInfo').innerHTML =
       '姓名　' + currentName + '<br>場次　' + sessionDate + '　' + sessionLoc +
       (data.checkedTime ? ('<br>領取時間　' + data.checkedTime) : '');
+    setSponsorBadge('alreadySponsor', currentSponsor);
     showStep('stepAlready');
   } else {
     alert('處理失敗，請重試或洽系統管理員。');
