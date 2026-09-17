@@ -269,7 +269,7 @@ function renderList(){
     const tr = document.createElement('tr');
     const isDone = r.status === '已領取';
     tr.innerHTML =
-      '<td>' + escapeHtml(r.name) + '</td>' +
+      '<td>' + escapeHtml(r.name) + (r.sponsor ? ' 🎁' : '') + '</td>' +
       '<td>' + escapeHtml(r.nickname || '') + '</td>' +
       '<td>' + escapeHtml(r.phone) + '</td>' +
       '<td><span class="badge ' + (isDone ? 'done' : 'pending') + '">' + (isDone ? '已領取' : '未領取') + '</span></td>' +
