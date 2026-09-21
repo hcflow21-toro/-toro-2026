@@ -253,8 +253,19 @@ const params = new URLSearchParams(location.search);
 const sessionDate = params.get('d') || '';
 const sessionLoc = params.get('l') || '';
 
+// 只允許「當天」的場次連結（以台灣時間為準）
+function isSessionToday(dateStr){
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: 'numeric', day: 'numeric'
+  }).formatToParts(new Date());
+  const get = t => parseInt(parts.find(p => p.type === t).value, 10);
+  const md = String(dateStr).split(' ')[0].split('/');
+  return get('year') === 2026 && parseInt(md[0], 10) === get('month') && parseInt(md[1], 10) === get('day');
+}
+
 function sessionValid(){
-  return SESSIONS.some(g => g.date === sessionDate && g.locations.includes(sessionLoc));
+  return SESSIONS.some(g => g.date === sessionDate && g.locations.includes(sessionLoc))
+      && isSessionToday(sessionDate);
 }
 
 document.getElementById('loading').style.display = 'none';

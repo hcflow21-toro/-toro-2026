@@ -133,10 +133,10 @@
   <div id="gate" class="card">
     <div class="field">
       <label>通行碼</label>
-      <input type="password" id="keyInput" placeholder="請輸入工作人員通行碼">
+      <input type="password" id="keyInput" placeholder="請輸入管理員通行碼">
     </div>
     <button class="btn" id="enterBtn">進入</button>
-    <div class="msg hidden" id="gateError">通行碼錯誤，請重新輸入。</div>
+    <div class="msg hidden" id="gateError">通行碼錯誤或非管理員通行碼，請重新輸入。</div>
   </div>
 
   <div id="panel" class="hidden">
@@ -146,6 +146,14 @@
         <input type="text" id="baseUrlInput" placeholder="例如 https://yourname.github.io/repo">
       </div>
       <button class="btn small" id="saveBaseUrlBtn">儲存網址</button>
+    </div>
+
+    <div class="card">
+      <div class="field">
+        <label><input type="checkbox" id="previewToggle" style="width:auto;margin:0 6px 0 0;vertical-align:middle;">以 staff 視角預覽（唯讀：套用個資遮罩與 staff 規則）</label>
+        <label style="font-weight:400;margin-top:8px;">模擬時間（選填；留空＝不套用日期與時段限制，只預覽遮罩後的資料）</label>
+        <input type="datetime-local" id="previewNow" style="margin-bottom:0;">
+      </div>
     </div>
 
     <div class="session-tabs" id="sessionTabs"></div>
@@ -201,7 +209,7 @@ function jsonp(url){
   });
 }
 
-let staffKey = sessionStorage.getItem('staffKey') || '';
+let staffKey = sessionStorage.getItem('adminKey') || '';
 let currentSession = null; // {date, location}
 let pollTimer = null;
 let fullList = [];
@@ -219,7 +227,7 @@ document.getElementById('enterBtn').addEventListener('click', async ()=>{
   staffKey = key;
   const ok = await trySessionList();
   if (ok) {
-    sessionStorage.setItem('staffKey', key);
+    sessionStorage.setItem('adminKey', key);
     document.getElementById('gate').classList.add('hidden');
     document.getElementById('panel').classList.remove('hidden');
     initPanel();
@@ -228,15 +236,11 @@ document.getElementById('enterBtn').addEventListener('click', async ()=>{
   }
 });
 
-// quick auth check using the first session as a probe
+// 驗證通行碼：必須是管理員身分
 async function trySessionList(){
-  const g = SESSIONS[0];
-  const url = CONFIG.SCRIPT_URL + '?action=sessionList'
-    + '&d=' + encodeURIComponent(g.date)
-    + '&l=' + encodeURIComponent(g.locations[0])
-    + '&key=' + encodeURIComponent(staffKey);
+  const url = CONFIG.SCRIPT_URL + '?action=auth&key=' + encodeURIComponent(staffKey);
   const data = await jsonp(url);
-  return data && !data.error;
+  return !!(data && !data.error && data.role === 'admin');
 }
 
 function initPanel(){
@@ -330,7 +334,8 @@ async function fetchSessionList(date, loc){
   const url = CONFIG.SCRIPT_URL + '?action=sessionList'
     + '&d=' + encodeURIComponent(date)
     + '&l=' + encodeURIComponent(loc)
-    + '&key=' + encodeURIComponent(staffKey);
+    + '&key=' + encodeURIComponent(staffKey)
+    + previewParams();
   const data = await jsonp(url);
   if (!data || data.error) return null;
   return (data.list || []).map(r => Object.assign({}, r, { sessionDate: date, sessionLoc: loc }));
@@ -344,7 +349,7 @@ async function loadList(){
     const results = await Promise.all(ALL_COMBOS.map(c => fetchSessionList(c.date, c.location)));
     const failed = results.some(r => r === null);
     if (failed) {
-      listError.textContent = '部分場次讀取失敗，名單可能不完整，請重新整理或重新輸入通行碼。';
+      listError.textContent = isPreview() ? '預覽（staff 規則）：部分場次目前不開放或讀取失敗。' : '部分場次讀取失敗，名單可能不完整，請重新整理或重新輸入通行碼。';
       listError.classList.remove('hidden');
     }
     fullList = results.filter(r => r !== null).flat();
@@ -355,7 +360,9 @@ async function loadList(){
   if (!currentSession) return;
   const list = await fetchSessionList(currentSession.date, currentSession.location);
   if (list === null) {
-    listError.textContent = '讀取名單失敗，請重新整理或重新輸入通行碼。';
+    fullList = [];
+    renderList();
+    listError.textContent = isPreview() ? '預覽（staff 規則）：此場次目前不開放，或讀取失敗。' : '讀取名單失敗，請重新整理或重新輸入通行碼。';
     listError.classList.remove('hidden');
     return;
   }
@@ -374,6 +381,7 @@ function renderList(){
     ? '【全部場次】共 ' + fullList.length + ' 人，已領取 ' + doneCount + ' 人'
     : '共 ' + fullList.length + ' 人，已領取 ' + doneCount + ' 人';
 
+  if (isPreview()) document.getElementById('countLine').textContent = '【staff 預覽】' + document.getElementById('countLine').textContent;
   const tbody = document.getElementById('listBody');
   tbody.innerHTML = '';
   filtered.forEach(r=>{
@@ -391,7 +399,7 @@ function renderList(){
     toggleBtn.className = 'btn small' + (isDone ? '' : ' gold');
     toggleBtn.textContent = isDone ? '改為未領取' : '標記已領取';
     toggleBtn.addEventListener('click', ()=> toggleStatus(r, isDone ? '未領取' : '已領取'));
-    tr.lastElementChild.appendChild(toggleBtn);
+    if (!isPreview()) tr.lastElementChild.appendChild(toggleBtn);
     tbody.appendChild(tr);
   });
 }
@@ -417,6 +425,17 @@ function escapeHtml(str){
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function isPreview(){
+  return document.getElementById('previewToggle').checked;
+}
+function previewParams(){
+  if (!isPreview()) return '';
+  const now = document.getElementById('previewNow').value;
+  return '&asStaff=1' + (now ? '&now=' + encodeURIComponent(now) : '');
+}
+document.getElementById('previewToggle').addEventListener('change', loadList);
+document.getElementById('previewNow').addEventListener('change', loadList);
+
 document.getElementById('searchInput').addEventListener('input', renderList);
 document.getElementById('refreshBtn').addEventListener('click', loadList);
 
@@ -429,7 +448,7 @@ document.getElementById('refreshBtn').addEventListener('click', loadList);
       document.getElementById('panel').classList.remove('hidden');
       initPanel();
     } else {
-      sessionStorage.removeItem('staffKey');
+      sessionStorage.removeItem('adminKey');
     }
   }
 })();

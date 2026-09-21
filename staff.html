@@ -160,6 +160,25 @@ const SESSIONS = [
   { date: "10/2 19:00-21:00", locations: ["台北中山地下街", "台中新時代星巴克", "高雄大遠百星巴克"] }
 ];
 
+// ---- 日期限制：只能看「今天」的場次（以台灣時間為準）----
+const SESSION_YEAR = 2026;
+function taipeiToday(){
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: 'numeric', day: 'numeric'
+  }).formatToParts(new Date());
+  const get = t => parseInt(parts.find(p => p.type === t).value, 10);
+  return { y: get('year'), m: get('month'), d: get('day') };
+}
+function isSessionToday(dateStr){
+  // dateStr 例："9/28 16:00-18:00"
+  const md = String(dateStr).split(' ')[0].split('/');
+  const t = taipeiToday();
+  return t.y === SESSION_YEAR && parseInt(md[0], 10) === t.m && parseInt(md[1], 10) === t.d;
+}
+function todaySessions(){
+  return SESSIONS.filter(g => isSessionToday(g.date));
+}
+
 function jsonp(url){
   return new Promise((resolve)=>{
     const cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*10000);
@@ -197,21 +216,24 @@ document.getElementById('enterBtn').addEventListener('click', async ()=>{
   }
 });
 
-// quick auth check using the first session as a probe
+// 驗證通行碼（不依賴場次日期，非活動日也能正確判斷通行碼對錯）
 async function trySessionList(){
-  const g = SESSIONS[0];
-  const url = CONFIG.SCRIPT_URL + '?action=sessionList'
-    + '&d=' + encodeURIComponent(g.date)
-    + '&l=' + encodeURIComponent(g.locations[0])
-    + '&key=' + encodeURIComponent(staffKey);
+  const url = CONFIG.SCRIPT_URL + '?action=auth&key=' + encodeURIComponent(staffKey);
   const data = await jsonp(url);
-  return data && !data.error;
+  return !!(data && !data.error);
 }
 
 function initPanel(){
   const tabsEl = document.getElementById('sessionTabs');
   tabsEl.innerHTML = '';
-  SESSIONS.forEach(g=>{
+  const todays = todaySessions();
+  if (!todays.length) {
+    tabsEl.innerHTML = '<div style="font-size:13px;color:rgba(245,243,237,0.8);">今天沒有場次，無法查看名單。</div>';
+    document.getElementById('listBody').innerHTML = '';
+    document.getElementById('countLine').textContent = '';
+    return;
+  }
+  todays.forEach(g=>{
     g.locations.forEach(loc=>{
       const tab = document.createElement('div');
       tab.className = 'session-tab';
@@ -229,6 +251,7 @@ function initPanel(){
 }
 
 function selectSession(date, loc){
+  if (!isSessionToday(date)) return;
   currentSession = { date, location: loc };
   loadList();
   if (pollTimer) clearInterval(pollTimer);
@@ -239,12 +262,48 @@ async function loadList(){
   if (!currentSession) return;
   const listError = document.getElementById('listError');
   listError.classList.add('hidden');
+  // 跨日（過了午夜）自動失效：停止輪詢並清空名單
+  if (!isSessionToday(currentSession.date)) {
+    if (pollTimer) clearInterval(pollTimer);
+    currentSession = null;
+    fullList = [];
+    renderList();
+    document.getElementById('sessionTabs').innerHTML = '';
+    listError.textContent = '此場次日期已過，名單已無法查看。';
+    listError.classList.remove('hidden');
+    return;
+  }
   const url = CONFIG.SCRIPT_URL + '?action=sessionList'
     + '&d=' + encodeURIComponent(currentSession.date)
     + '&l=' + encodeURIComponent(currentSession.location)
     + '&key=' + encodeURIComponent(staffKey);
   const data = await jsonp(url);
+  if (data && data.error === 'not_open') {
+    fullList = [];
+    renderList();
+    document.getElementById('countLine').textContent = '';
+    if (data.reason === 'after') {
+      if (pollTimer) clearInterval(pollTimer);
+      listError.textContent = '此場次名單已於 ' + data.closesAt + ' 關閉。';
+    } else {
+      listError.textContent = '此場次名單將於 ' + data.opensAt + ' 開放（開放後會自動顯示）。';
+    }
+    listError.style.color = 'var(--ink-soft)';
+    listError.classList.remove('hidden');
+    return;
+  }
+  if (data && data.error === 'session_not_today') {
+    if (pollTimer) clearInterval(pollTimer);
+    fullList = [];
+    renderList();
+    document.getElementById('countLine').textContent = '';
+    listError.textContent = '此場次日期已過，名單已無法查看。';
+    listError.style.color = '';
+    listError.classList.remove('hidden');
+    return;
+  }
   if (!data || data.error) {
+    listError.style.color = '';
     listError.textContent = '讀取名單失敗，請重新整理或重新輸入通行碼。';
     listError.classList.remove('hidden');
     return;
@@ -287,11 +346,16 @@ function renderList(){
 }
 
 async function toggleStatus(row, newStatus){
+  if (!currentSession || !isSessionToday(currentSession.date)) {
+    alert('此場次已不是今天，無法操作。');
+    return;
+  }
   const url = CONFIG.SCRIPT_URL + '?action=toggleStatus'
     + '&d=' + encodeURIComponent(currentSession.date)
     + '&l=' + encodeURIComponent(currentSession.location)
     + '&name=' + encodeURIComponent(row.name)
     + '&phone=' + encodeURIComponent(row.phone)
+    + '&row=' + encodeURIComponent(row.id)
     + '&status=' + encodeURIComponent(newStatus)
     + '&key=' + encodeURIComponent(staffKey);
   const data = await jsonp(url);
